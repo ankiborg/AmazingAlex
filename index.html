@@ -104,7 +104,42 @@
     text-transform: uppercase;
     color: var(--ink-soft);
   }
-  .levels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+  .tally {
+    margin: 0;
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--brass);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally b { color: var(--ink); font-weight: 500; }
+  .tally .of { color: var(--ink-soft); }
+
+  .levels { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .levels .chap {
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-left: 8px;
+    align-self: center;
+  }
+  .levels .chap:first-child { margin-left: 0; }
+  .lvl[data-state="cleared"] {
+    border-color: var(--brass);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brass) 45%, transparent);
+  }
+  .lvl[data-state="cleared"]::after {
+    content: "";
+    position: absolute;
+    right: 3px; bottom: 3px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--brass);
+  }
+  .lvl { position: relative; }
   .lvl {
     font-family: "DM Mono", ui-monospace, monospace;
     font-size: 13px;
@@ -283,9 +318,44 @@
     color: var(--ink);
   }
 
+  .picker { display: none; padding: 8px 12px; font-size: 13px; }
+  .picker span { font-family: "DM Mono", ui-monospace, monospace; color: var(--ink-soft); margin-left: 7px; }
+
+  /* Stående telefon ger en 3:2-bräda som är bredare än den är hög — liggande
+     är dubbelt så stor. Tipset syns bara där det gäller. */
+  .turn { display: none; }
+  @media (max-width: 620px) and (orientation: portrait) {
+    .turn {
+      display: block;
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--ink-soft);
+      text-align: center;
+    }
+  }
+
+  /* På en smal skärm tar fjorton knappar tre rader och halva brädan. Där får
+     de bo i en utfällbar lista i stället. */
+  @media (max-width: 720px) {
+    .picker { display: inline-flex; }
+    .levels {
+      display: none;
+      width: 100%;
+      justify-content: flex-start;
+      padding: 10px 0 2px;
+      border-top: 1px solid var(--line);
+      margin-top: 8px;
+    }
+    .levels[data-open="true"] { display: flex; }
+    .top { gap: 8px; }
+    .right { width: 100%; }
+    .brand { flex-wrap: wrap; gap: 4px 10px; }
+  }
+
   @media (max-width: 560px) {
     .slot .name { display: none; }
     .app { padding-inline: 10px; }
+    h1 { font-size: 30px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .btn.go:active { transform: none; }
@@ -298,7 +368,13 @@
       <h1>Kulbanan</h1>
       <small id="lvlName">Bana 1</small>
     </div>
-    <nav class="levels" id="levels" aria-label="Banor"></nav>
+    <div class="right">
+      <p class="tally" id="tally"><span aria-hidden="true">★</span> <b id="tallyNum">0</b><span class="of">/0</span></p>
+      <button class="btn picker" id="picker" aria-expanded="false" aria-controls="levels">
+        Banor <span id="pickerNum">1/1</span>
+      </button>
+      <nav class="levels" id="levels" aria-label="Banor"></nav>
+    </div>
   </header>
 
   <div class="task">
@@ -319,6 +395,8 @@
       </div>
     </div>
   </div>
+
+  <p class="turn">Vänd telefonen så blir brädan dubbelt så stor.</p>
 
   <div class="bench">
     <div class="slots" id="slots"></div>
@@ -372,6 +450,17 @@
 <script>
 (function () {
   "use strict";
+
+  // Filen ska fungera både öppnad rakt av och inbäddad i ett omslag som redan
+  // satt en viewport. Utan den ritar en telefon sidan som om skärmen vore
+  // 980 px bred, och hela brädan hamnar utanför.
+  if (!document.querySelector('meta[name="viewport"]')) {
+    var vp = document.createElement("meta");
+    vp.name = "viewport";
+    vp.content = "width=device-width, initial-scale=1";
+    document.head.appendChild(vp);
+  }
+
   if (!window.Matter) {
     var veilEl0 = document.getElementById("veil");
     veilEl0.setAttribute("data-open", "true");
@@ -549,6 +638,18 @@
   // ---------------------------------------------------------------- levels
   // fixed: plywood already nailed to the wall. cup: {x, y} = centre of the
   // opening's base. tray: how many of each part the player gets.
+  // Kapitlen ger banorna en rytm: först plankor, sedan verktygen ett i taget,
+  // sist banor som kräver flera av dem samtidigt.
+  var CHAPTERS = [
+    { name: "Grunderna", from: 0 },
+    { name: "Verktygen", from: 4 },
+    { name: "Mästarbanorna", from: 8 }
+  ];
+  function chapterOf(i) {
+    for (var c = CHAPTERS.length - 1; c >= 0; c--) if (i >= CHAPTERS[c].from) return CHAPTERS[c];
+    return CHAPTERS[0];
+  }
+
   var LEVELS = [
     {
       name: "Första rullen",
@@ -680,6 +781,107 @@
       solution: [
         { type: "seesaw", x: 201, y: 240, a: 50 },
         { type: "short", x: 504, y: 401, a: -10 }
+      ]
+    },
+    {
+      name: "Bakom muren",
+      hint: "Muren släpper bara igenom under sig.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 330, y: 250, w: 20, h: 180, a: 0 },
+        { x: 600, y: 430, w: 400, h: 16, a: 8 }
+      ],
+      cup: { x: 798, y: 568 },
+      stars: [ { x: 252, y: 219 } ],
+      tray: { funnel: 1, bounce: 1, short: 1 },
+      solution: [
+        { type: "funnel", x: 221, y: 274, a: 65 },
+        { type: "bounce", x: 295, y: 435, a: 50 },
+        { type: "short", x: 324, y: 382, a: 10 }
+      ]
+    },
+    {
+      name: "Vindtunneln",
+      hint: "Gapet lutar uppåt. Bara luft tar sig dit.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 200, y: 400, w: 280, h: 16, a: 10 },
+        { x: 700, y: 430, w: 300, h: 16, a: 8 }
+      ],
+      cup: { x: 849, y: 561 },
+      stars: [ { x: 417, y: 182 }, { x: 508, y: 294 } ],
+      tray: { fan: 2, short: 1 },
+      solution: [
+        { type: "fan", x: 116, y: 208, a: 30 },
+        { type: "fan", x: 193, y: 159, a: 70 }
+      ]
+    },
+    {
+      name: "Tillbaka upp",
+      hint: "Hyllan lutar åt fel håll.",
+      spawn: { x: 470, y: 100 },
+      fixed: [
+        { x: 430, y: 250, w: 240, h: 16, a: -10 },
+        { x: 660, y: 450, w: 340, h: 16, a: 8 }
+      ],
+      cup: { x: 828, y: 584 },
+      stars: [ { x: 550, y: 207 } ],
+      tray: { seesaw: 1, bounce: 1, plank: 1 },
+      solution: [
+        { type: "seesaw", x: 422, y: 160, a: -15 }
+      ]
+    },
+    {
+      name: "Nålsögat",
+      hint: "Fånga brett, släpp smalt, blås resten.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 360, y: 300, w: 20, h: 170, a: 0 },
+        { x: 452, y: 300, w: 20, h: 170, a: 0 },
+        { x: 700, y: 470, w: 300, h: 16, a: 8 }
+      ],
+      cup: { x: 849, y: 601 },
+      stars: [ { x: 470, y: 196 }, { x: 555, y: 288 } ],
+      tray: { funnel: 1, fan: 1, short: 1 },
+      solution: [
+        { type: "funnel", x: 136, y: 283, a: -45 },
+        { type: "fan", x: 174, y: 190, a: 25 }
+      ]
+    },
+    {
+      name: "Verkstaden",
+      hint: "En av varje. Använd dem i rätt ordning.",
+      spawn: { x: 140, y: 108 },
+      fixed: [
+        { x: 300, y: 470, w: 300, h: 16, a: 0 },
+        { x: 560, y: 330, w: 24, h: 120, a: 0 },
+        { x: 720, y: 440, w: 300, h: 16, a: 8 }
+      ],
+      cup: { x: 869, y: 571 },
+      stars: [ { x: 517, y: 157 }, { x: 581, y: 256 } ],
+      tray: { bounce: 1, seesaw: 1, plank: 1 },
+      solution: [
+        { type: "bounce", x: 170, y: 252, a: 40 },
+        { type: "seesaw", x: 86, y: 184, a: -55 },
+        { type: "plank", x: 417, y: 154, a: 15 }
+      ]
+    },
+    {
+      name: "Finalen",
+      hint: "Rampen ger fart. Muren tar den ifrån dig.",
+      spawn: { x: 160, y: 100 },
+      fixed: [
+        { x: 250, y: 250, w: 240, h: 16, a: 12 },
+        { x: 520, y: 250, w: 24, h: 160, a: 0 },
+        { x: 740, y: 430, w: 300, h: 16, a: 8 }
+      ],
+      cup: { x: 889, y: 561 },
+      stars: [ { x: 315, y: 240 }, { x: 585, y: 348 } ],
+      tray: { bounce: 1, funnel: 1, plank: 1 },
+      solution: [
+        { type: "bounce", x: 145, y: 197, a: 25 },
+        { type: "funnel", x: 360, y: 317, a: -5 },
+        { type: "plank", x: 499, y: 379, a: -5 }
       ]
     }
   ];
@@ -871,11 +1073,37 @@
   };
   var reduceMotion = window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
+  // Vilka banor som är klarade, inte bara hur långt man kommit: det är det som
+  // gör stjärnräkningen sann även när man hoppar tillbaka och spelar om.
+  var cleared = {};
   var unlocked = 0;
   try {
+    var savedList = localStorage.getItem("kulbanan.cleared");
+    if (savedList) {
+      savedList.split(",").forEach(function (n) {
+        var k = parseInt(n, 10);
+        if (!isNaN(k) && k >= 0 && k < LEVELS.length) cleared[k] = true;
+      });
+    }
     var saved = parseInt(localStorage.getItem("kulbanan.progress") || "0", 10);
     if (!isNaN(saved)) unlocked = Math.max(0, Math.min(LEVELS.length - 1, saved));
-  } catch (e) { /* private mode — start from bana 1 */ }
+  } catch (e) { /* privat läge — börja från bana 1 */ }
+  Object.keys(cleared).forEach(function (n) {
+    unlocked = Math.max(unlocked, Math.min(LEVELS.length - 1, Number(n) + 1));
+  });
+
+  function starsTotal() {
+    return LEVELS.reduce(function (n, l) { return n + l.stars.length; }, 0);
+  }
+  function starsTaken() {
+    return LEVELS.reduce(function (n, l, i) { return n + (cleared[i] ? l.stars.length : 0); }, 0);
+  }
+  function saveProgress() {
+    try {
+      localStorage.setItem("kulbanan.cleared", Object.keys(cleared).join(","));
+      localStorage.setItem("kulbanan.progress", String(unlocked));
+    } catch (e) {}
+  }
 
   function level() { return LEVELS[state.level]; }
 
@@ -991,14 +1219,19 @@
     Sound.roll(0);
     if (kind === "win") Sound.win(); else Sound.fail();
     if (kind === "win") {
-      if (state.level >= unlocked && state.level + 1 < LEVELS.length) {
-        unlocked = state.level + 1;
-        try { localStorage.setItem("kulbanan.progress", String(unlocked)); } catch (e) {}
-      }
-      veil(true, "Klart!", state.level + 1 < LEVELS.length
-        ? "Kulan tog allt på vägen ner."
-        : "Alla banor klara. Bygg om vilken du vill.",
-        state.level + 1 < LEVELS.length ? "Nästa bana" : "Spela om");
+      var fresh = !cleared[state.level];
+      cleared[state.level] = true;
+      if (state.level >= unlocked && state.level + 1 < LEVELS.length) unlocked = state.level + 1;
+      saveProgress();
+      var more = state.level + 1 < LEVELS.length;
+      var taken = starsTaken();
+      veil(true, "Klart!",
+        more
+          ? (fresh ? "Kulan tog allt på vägen ner. " : "") + taken + " av " + starsTotal() + " stjärnor."
+          : (taken === starsTotal()
+              ? "Alla " + starsTotal() + " stjärnor. Hela verkstaden är din."
+              : "Sista banan klar. " + taken + " av " + starsTotal() + " stjärnor tagna."),
+        more ? "Nästa bana" : "Spela om");
     } else {
       var texts = {
         "fell": ["Kulan rullade av", "Den lämnade brädan innan koppen. Flytta en del och försök igen."],
@@ -1066,7 +1299,27 @@
     if (mq.addEventListener) mq.addEventListener("change", function () { readTokens(); render(); });
   }
 
+  /**
+   * Brädan ska rymmas på en skärm tillsammans med rubrik, uppgift och hylla —
+   * en hylla under skärmkanten går inte att dra ifrån. CSS gissar med en
+   * konstant; här mäts det som faktiskt står runt omkring, så att en rubrik
+   * som radbryts på en smal skärm krymper brädan i stället för att putta ner
+   * hyllan. Hjälptexten räknas inte: den ska få fälla ut sig och rulla.
+   */
+  var chromeHeight = 0;
+  function fitStage() {
+    if (helpEl && helpEl.open) return;
+    var stage = document.querySelector(".stage");
+    stage.style.maxWidth = "none";
+    var appH = document.querySelector(".app").getBoundingClientRect().height;
+    var stageH = stage.getBoundingClientRect().height;
+    chromeHeight = appH - stageH;
+    var avail = window.innerHeight - chromeHeight - 14;
+    stage.style.maxWidth = Math.min(1000, Math.max(300, avail * 1.5)) + "px";
+  }
+
   function fitCanvas() {
+    fitStage();
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var r = canvas.getBoundingClientRect();
     if (!r.width) return;
@@ -1643,12 +1896,27 @@
   function buildLevels() {
     levelsEl.textContent = "";
     LEVELS.forEach(function (lv, i) {
+      var start = CHAPTERS.filter(function (c) { return c.from === i; })[0];
+      if (start) {
+        var tag = document.createElement("span");
+        tag.className = "chap";
+        tag.textContent = start.name;
+        levelsEl.appendChild(tag);
+      }
       var b = document.createElement("button");
       b.className = "lvl";
       b.type = "button";
       b.textContent = String(i + 1);
       b.title = lv.name;
-      b.addEventListener("click", function () { if (i <= unlocked) loadLevel(i, false); });
+      b.addEventListener("click", function () {
+        if (i > unlocked) return;
+        loadLevel(i, false);
+        if (window.matchMedia("(max-width: 720px)").matches) {
+          levelsEl.dataset.open = "false";
+          pickerBtn.setAttribute("aria-expanded", "false");
+          fitCanvas();
+        }
+      });
       levelsEl.appendChild(b);
     });
   }
@@ -1660,7 +1928,9 @@
       state.parts.length + " av " + Object.keys(level().tray).reduce(function (n, k) {
         return n + level().tray[k];
       }, 0) + " delar utplacerade.");
-    document.getElementById("lvlName").textContent = "Bana " + (state.level + 1) + " · " + level().name;
+    var wide = window.innerWidth > 720;
+    document.getElementById("lvlName").textContent = "Bana " + (state.level + 1) + " · " +
+      (wide ? chapterOf(state.level).name + " · " : "") + level().name;
     document.getElementById("taskHint").textContent = level().hint;
     Array.prototype.forEach.call(slotsEl.children, function (el) {
       var n = state.tray[el.dataset.kind] || 0;
@@ -1668,10 +1938,18 @@
       el.dataset.empty = (n === 0 || state.running) ? "true" : "false";
       el.disabled = n === 0 || state.running;
     });
-    Array.prototype.forEach.call(levelsEl.children, function (el, i) {
+    var n = 0;
+    Array.prototype.forEach.call(levelsEl.children, function (el) {
+      if (el.tagName !== "BUTTON") return;
+      var i = n++;
       el.setAttribute("aria-current", i === state.level ? "true" : "false");
       el.disabled = i > unlocked;
+      el.dataset.state = cleared[i] ? "cleared" : i > unlocked ? "locked" : "open";
+      el.title = LEVELS[i].name + (cleared[i] ? " — klarad" : i > unlocked ? " — låst" : "");
     });
+    tallyNum.textContent = String(starsTaken());
+    tallyOf.textContent = "/" + starsTotal();
+    pickerNum.textContent = (state.level + 1) + "/" + LEVELS.length;
     var jammed = state.blocked.length > 0;
     warnEl.hidden = !jammed || state.running;
     playBtn.disabled = state.running || jammed;
@@ -1683,6 +1961,17 @@
     hintBtn.hidden = state.fails < 3 || state.running || !level().solution.length;
   }
 
+  var pickerBtn = document.getElementById("picker");
+  var pickerNum = document.getElementById("pickerNum");
+  pickerBtn.addEventListener("click", function () {
+    var open = levelsEl.dataset.open !== "true";
+    levelsEl.dataset.open = open ? "true" : "false";
+    pickerBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    fitCanvas();
+  });
+
+  var tallyNum = document.getElementById("tallyNum");
+  var tallyOf = document.querySelector(".tally .of");
   var muteBtn = document.getElementById("mute");
   var muteGlyph = document.getElementById("muteGlyph");
   function paintMute() {
@@ -1702,6 +1991,7 @@
     }, { once: true });
   });
 
+  var helpEl = document.querySelector("details.help");
   var undoBtn = document.getElementById("undo");
   var hintBtn = document.getElementById("hint");
   var warnEl = document.getElementById("warn");
@@ -1803,6 +2093,7 @@
   playBtn.addEventListener("click", startRun);
   resetBtn.addEventListener("click", function () { resetRun(); render(); });
   window.addEventListener("resize", fitCanvas);
+  if (helpEl) helpEl.addEventListener("toggle", function () { if (!helpEl.open) fitCanvas(); });
 
   buildLevels();
   buildSlots();

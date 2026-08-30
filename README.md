@@ -10,7 +10,15 @@ fristående och kräver ingen server.
 
 ## Spelet
 
-Åtta banor. Varje bana ger dig en bricka med delar:
+Fjorton banor i tre kapitel:
+
+| Kapitel | Banor | Vad de handlar om |
+| --- | --- | --- |
+| Grunderna | 1–4 | Plankor: lutning, räckvidd, kedjor av hopp |
+| Verktygen | 5–8 | Studsmatta, tratt, fläkt och vippa, ett i taget |
+| Mästarbanorna | 9–14 | Flera verktyg samtidigt |
+
+Varje bana ger dig en bricka med delar:
 
 | Del | Vad den gör |
 | --- | --- |
@@ -28,6 +36,11 @@ Utplacerade delar sitter fast — de är nålade i väggen, inte lösa föremål
 En del får inte sitta inuti fast plywood, koppen, lådan eller en annan del. En
 sådan lyser röd och **Spela** är avstängd tills den flyttats — annars hade
 spelaren kunnat bygga lägen fysiken inte kan svara vettigt på.
+
+Räknaren uppe till höger visar hur många av spelets stjärnor som är hämtade.
+Klarade banor märks med en mässingsprick i banväljaren, och eftersom det är
+*vilka* banor som är klarade som sparas — inte bara hur långt man kommit —
+stämmer räkningen även när man hoppar tillbaka och spelar om en gammal bana.
 
 Efter ett misslyckat försök ligger kulans bana kvar som en blek pricklinje, så
 man ser var det gick fel. Efter tre misslyckade försök erbjuds en ledtråd som
@@ -54,6 +67,16 @@ Allt ljud är syntat med WebAudio — inga filer. Rullljudets volym följer kula
 fart, anslag låter olika hårt beroende på hur fort den slog i, och stjärnorna
 klingar stigande för varje tagen i samma försök. Ljudkontexten skapas först vid
 en riktig användargest, annars blockerar webbläsaren den ändå.
+
+## På liten skärm
+
+Brädan mäter själv hur mycket plats rubrik, uppgift och hylla tar och krymper
+därefter, så att hyllan aldrig hamnar under skärmkanten — en hylla man inte ser
+går inte att dra delar ifrån. Under 720 px flyttar banväljaren in i en
+utfällbar knapp av samma skäl: fjorton knappar tar tre rader och halva brädan.
+
+Filen sätter också sin egen `viewport`-meta om den saknas. Öppnad rakt av
+utan den ritar en telefon sidan som om skärmen vore 980 px bred.
 
 ## Så är det byggt
 
