@@ -22,9 +22,35 @@ Dra en del från hyllan ut på brädan, tryck på den för att markera den, dra 
 orange ratten för att vrida (snäpper till 5°) och kryssen för att ta bort den.
 Utplacerade delar sitter fast — de är nålade i väggen, inte lösa föremål.
 
+En del får inte sitta inuti fast plywood, koppen, lådan eller en annan del. En
+sådan lyser röd och **Spela** är avstängd tills den flyttats — annars hade
+spelaren kunnat bygga lägen fysiken inte kan svara vettigt på.
+
 Efter ett misslyckat försök ligger kulans bana kvar som en blek pricklinje, så
-man ser var det gick fel. Klarad bana låser upp nästa; framstegen sparas i
-`localStorage`.
+man ser var det gick fel. Efter tre misslyckade försök erbjuds en ledtråd som
+ritar var lösningens *första* del ska sitta — resten får man klura ut själv.
+Klarad bana låser upp nästa; framstegen sparas i `localStorage`.
+
+### Tangentbord
+
+Hela spelet går att klara utan pekdon, och `npm test` bevakar det.
+
+| Tangent | Gör |
+| --- | --- |
+| <kbd>1</kbd>–<kbd>3</kbd> | Tar motsvarande del ur hyllan och lägger den mitt på brädan |
+| Pilarna | Flyttar markerad del 6 px, med <kbd>Skift</kbd> 1 px |
+| <kbd>,</kbd> <kbd>.</kbd> | Vrider 5° |
+| <kbd>S</kbd> | Markerar nästa utplacerade del |
+| <kbd>Delete</kbd> | Tar bort markerad del |
+| <kbd>Ctrl</kbd>+<kbd>Z</kbd> | Ångrar senaste ändringen |
+| <kbd>Enter</kbd> | Spelar · <kbd>R</kbd> börjar om · <kbd>M</kbd> ljud av/på |
+
+### Ljud
+
+Allt ljud är syntat med WebAudio — inga filer. Rullljudets volym följer kulans
+fart, anslag låter olika hårt beroende på hur fort den slog i, och stjärnorna
+klingar stigande för varje tagen i samma försök. Ljudkontexten skapas först vid
+en riktig användargest, annars blockerar webbläsaren den ändå.
 
 ## Så är det byggt
 
@@ -76,18 +102,39 @@ npm install
 npm test          # spelar upp varje bana genom gränssnittet
 ```
 
-Testet kräver att alla fem banor slutar med "Klart!" och att ingen av dem går att
-klara med tom bricka. Har du ingen webbläsare via Playwright, peka ut en egen med
+Testet kräver att
+
+- alla fem banor slutar med "Klart!",
+- ingen bana går att klara med tom bricka,
+- ingen sparad lösning lägger en del i vägen för fast geometri,
+- bana 1 går att bygga **för hand** med mus, på surfplatta och på mobil, och
+- bana 1 går att bygga **enbart från tangentbordet**.
+
+Har du ingen webbläsare via Playwright, peka ut en egen med
 `CHROMIUM_PATH=/sökväg/till/chrome npm test`.
+
+En fallgrop värd att känna till: handtesterna måste köra i förgrunden.
+Bakgrundsflikar får sin `requestAnimationFrame` strypt, och spelets fysik går i
+takt med den — testet hänger annars i väntan på en kula som knappt rör sig.
 
 ### Lägga till en bana
 
-1. Skriv geometrin (`spawn`, `fixed`, `cup`, `tray`) i `LEVELS`.
-2. Hitta en lösning. `window.__kulbanan.simulate(banIndex, delar)` kör en bana
-   headless och svarar `win`, `fell`, `stall`, `cup-missing-stars` eller
-   `timeout` — samma funktion som sökningen använde.
-3. Lägg stjärnorna på den funna banan, sätt in lösningen som `solution` och kör
-   `npm test`.
+1. Skriv geometrin (`spawn`, `fixed`, `cup`, `tray`) i `LEVELS`. Sista posten i
+   `fixed` ska vara rännan.
+2. Låt sökningen leta en lösning:
+
+   ```
+   node tools/search.mjs 5              # bana 6, nollindexerat
+   node tools/search.mjs 5 --budget 40000
+   ```
+
+   Den skriver träffarna till `tools/solutions.json` och godtar bara
+   placeringar spelet självt tillåter.
+3. Lägg stjärnorna på den funna banan. Två regler gör skillnaden mellan en
+   stjärna som betyder något och en som är gratis: den ska ligga **efter** att
+   kulan lämnat sin fallinje och **före** rännan, och minst ~50 px från
+   lösningens egna delar — annars göms den bakom en planka.
+4. Sätt in lösningen som `solution` och kör `npm test`.
 
 `window.__kulbanan.applySolution()` bygger den sparade lösningen åt dig i
 gränssnittet — bekvämt vid felsökning, och det är så testet spelar banorna.

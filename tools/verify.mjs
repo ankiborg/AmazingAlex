@@ -35,6 +35,19 @@ const levels = await page.evaluate(() => window.__kulbanan.levels.map((l) => l.n
 let failed = 0;
 let hands = 0;
 
+// en sparad lösning får inte lägga en del inuti fast plywood, koppen eller
+// lådan — spelet vägrar spela ett sånt bygge, så testet skulle hänga
+for (let i = 0; i < levels.length; i++) {
+  const jam = await page.evaluate(
+    (n) => window.__kulbanan.isBlocked(n, window.__kulbanan.levels[n].solution),
+    i
+  );
+  if (jam.some(Boolean)) {
+    console.error(`✗ Bana ${i + 1} ${levels[i]}: lösningen sitter i vägen (${JSON.stringify(jam)})`);
+    failed++;
+  }
+}
+
 // tom bricka får aldrig räcka
 for (let i = 0; i < levels.length; i++) {
   const r = await page.evaluate((n) => window.__kulbanan.simulate(n, [], 900).result, i);
@@ -118,6 +131,40 @@ for (const [label, opts] of [
     hands++;
   } else {
     console.error(`✗ Bygg för hand (${label}): "${title}"`);
+    failed++;
+  }
+  await ctx.close();
+}
+
+// Bygg bana 1 från tangentbordet: ta plankan med 1, flytta med pilarna, vrid
+// med punkt, spela med Enter. Hela spelet ska gå att klara utan pekdon.
+{
+  const ctx = await browser.newContext({ viewport: { width: 1120, height: 940 } });
+  const kb = await ctx.newPage();
+  await kb.bringToFront();
+  kb.on("pageerror", (e) => errors.push("tangentbord: " + e.message));
+  await kb.goto(page_url);
+  await kb.evaluate(() => {
+    try { localStorage.removeItem("kulbanan.progress"); } catch (e) {}
+  });
+  await kb.reload();
+  await kb.waitForFunction(() => !!window.__kulbanan, null, { timeout: 15000 });
+
+  await kb.keyboard.press("1");
+  const press = async (key, times) => {
+    for (let n = 0; n < times; n++) await kb.keyboard.press(key);
+  };
+  // delen läggs mitt på brädan; därifrån till lösningens läge
+  await press("ArrowLeft", Math.round((480 - 219) / 6));
+  await press("ArrowUp", Math.round((320 - 203) / 6));
+  await press(".", 6);
+  await kb.keyboard.press("Enter");
+  await kb.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
+  const title = await kb.textContent("#veilTitle");
+  if (title === "Klart!") {
+    console.log("✓ Bygg med tangentbord");
+  } else {
+    console.error(`✗ Bygg med tangentbord: "${title}"`);
     failed++;
   }
   await ctx.close();

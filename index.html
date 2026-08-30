@@ -11,6 +11,7 @@
     --line: #CFC4B2;
     --accent: #E2560B;
     --accent-ink: #FFF6F0;
+    --danger: #B4291D;
     --brass: #D99B24;
     --shadow: 0 1px 0 rgba(38,34,30,.10), 0 12px 28px -14px rgba(38,34,30,.45);
 
@@ -37,6 +38,7 @@
       --line: #383430;
       --accent: #FF7A33;
       --accent-ink: #1B1108;
+      --danger: #FF6B5A;
       --brass: #E8B54A;
       --shadow: 0 1px 0 rgba(0,0,0,.5), 0 16px 34px -16px rgba(0,0,0,.8);
       --board: #8E7551;
@@ -54,6 +56,7 @@
     --line: #383430;
     --accent: #FF7A33;
     --accent-ink: #1B1108;
+    --danger: #FF6B5A;
     --brass: #E8B54A;
     --shadow: 0 1px 0 rgba(0,0,0,.5), 0 16px 34px -16px rgba(0,0,0,.8);
     --board: #8E7551;
@@ -131,6 +134,10 @@
     font-size: 16px;
   }
   .task span { color: var(--ink-soft); font-size: 14px; }
+  .task .warn {
+    color: var(--danger);
+    font-weight: 600;
+  }
 
   /* ---- board ---- */
   /* the whole thing has to fit one screen — a tablet in landscape is where
@@ -251,6 +258,17 @@
   }
   details.help ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink-soft); max-width: 62ch; }
   details.help li { margin-bottom: 5px; }
+  details.help .keys { color: var(--ink-soft); max-width: 78ch; margin: 12px 0 0; line-height: 2; }
+  kbd {
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-size: 11px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 6px;
+    background: var(--ground-2);
+    color: var(--ink);
+  }
 
   @media (max-width: 560px) {
     .slot .name { display: none; }
@@ -273,6 +291,7 @@
   <div class="task">
     <b id="taskTitle">Ta alla stjärnor, landa i koppen.</b>
     <span id="taskHint"></span>
+    <span class="warn" id="warn" hidden>En del sitter i vägen — flytta den röda.</span>
   </div>
 
   <div class="stage">
@@ -293,6 +312,10 @@
     <button class="btn icon" id="mute" aria-pressed="false" title="Ljud av/på">
       <span id="muteGlyph" aria-hidden="true">♪</span><span class="sr">Ljud</span>
     </button>
+    <button class="btn icon" id="undo" title="Ångra (Ctrl+Z)">
+      <span aria-hidden="true">↺</span><span class="sr">Ångra</span>
+    </button>
+    <button class="btn" id="hint" hidden>Ledtråd</button>
     <button class="btn" id="reset">Börja om</button>
     <button class="btn go" id="play">Spela</button>
   </div>
@@ -303,10 +326,23 @@
     <ul>
       <li><b>Dra en del</b> från hyllan ut på pegboarden. Den nålas fast där du släpper den.</li>
       <li><b>Tryck på en utplacerad del</b> för att markera den: dra i den orange ratten för att vrida, kryssen tar bort den.</li>
+      <li>En del som lyser <b>rött</b> sitter i vägen — inuti en fast planka, koppen eller en annan del. Flytta den, annars går banan inte att spela.</li>
       <li><b>Spela</b> släpper kulan ur lådan. Fysiken sköter resten — du får inte röra något medan den rullar.</li>
       <li>Alla stjärnor måste tas <i>innan</i> kulan landar i koppen.</li>
-      <li>Den bleka pricklinjen visar var kulan tog vägen förra försöket.</li>
+      <li>Den bleka pricklinjen visar var kulan tog vägen förra försöket. Efter tre misslyckade försök kan du be om en ledtråd.</li>
     </ul>
+    <p class="keys">
+      <b>Tangentbord:</b>
+      <kbd>1</kbd>–<kbd>3</kbd> tar en del ur hyllan ·
+      <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> flyttar (<kbd>Skift</kbd> finlir) ·
+      <kbd>,</kbd> <kbd>.</kbd> vrider ·
+      <kbd>S</kbd> nästa del ·
+      <kbd>Delete</kbd> tar bort ·
+      <kbd>Ctrl</kbd>+<kbd>Z</kbd> ångrar ·
+      <kbd>Enter</kbd> spelar ·
+      <kbd>R</kbd> börjar om ·
+      <kbd>M</kbd> ljud av/på
+    </p>
   </details>
 </div>
 
@@ -516,11 +552,10 @@
         { x: 547, y: 417, w: 600, h: 16, a: 8 }
       ],
       cup: { x: 844, y: 569 },
-      stars: [ { x: 182, y: 301 } ],
+      stars: [ { x: 240, y: 301 } ],
       tray: { bounce: 1, plank: 1 },
       solution: [
-        { type: "bounce", x: 296, y: 494, a: -70 },
-        { type: "plank", x: 209, y: 329, a: 10 }
+        { type: "bounce", x: 176, y: 299, a: 20 }
       ]
     },
     {
@@ -554,9 +589,9 @@
       stars: [ { x: 202, y: 213 }, { x: 451, y: 333 } ],
       tray: { plank: 1, bounce: 1, short: 1 },
       solution: [
-        { type: "plank", x: 231, y: 252, a: 25 },
-        { type: "bounce", x: 175, y: 408, a: -45 },
-        { type: "short", x: 400, y: 335, a: 25 }
+        { type: "plank", x: 214, y: 216, a: 30 },
+        { type: "bounce", x: 379, y: 367, a: 60 },
+        { type: "short", x: 446, y: 345, a: 0 }
       ]
     }
   ];
@@ -587,6 +622,23 @@
       friction: s.fric, restitution: s.rest, label: "part:" + p.type
     });
   }
+  // En del får inte sitta inuti något annat. Väggarna räknas inte — en planka
+  // som sticker ut över kanten är harmlös — men fast plywood, koppen, lådan och
+  // andra utplacerade delar gör att bygget inte går att spela.
+  function blockers(level, parts, self) {
+    var list = level.fixed.map(fixedBody).concat(cupBodies(level.cup));
+    list.push(M.Bodies.rectangle(level.spawn.x, level.spawn.y - 46, 84, 70, { isStatic: true }));
+    parts.forEach(function (p) { if (p !== self) list.push(partBody(p)); });
+    return list;
+  }
+  function isBlocked(p, level, parts) {
+    var body = partBody(p), list = blockers(level, parts, p);
+    for (var i = 0; i < list.length; i++) {
+      if (M.Collision.collides(body, list[i])) return true;
+    }
+    return false;
+  }
+
   function makeBall(spawn) {
     return M.Bodies.circle(spawn.x, spawn.y, BALL_R, {
       restitution: 0.24, friction: 0.035, frictionAir: 0.006,
@@ -658,9 +710,10 @@
   var state = {
     level: 0, parts: [], tray: {}, engine: null, ball: null,
     running: false, selected: null, drag: null,
-    stars: [], trail: [], ghost: [], sparks: [],
+    stars: [], trail: [], ghost: [], sparks: [], blocked: [],
     inside: 0, still: 0, ticks: 0, ended: null, shake: 0,
-    hatch: 0, gotCount: 0, lastSpeed: 0, flash: 0
+    hatch: 0, gotCount: 0, lastSpeed: 0, flash: 0,
+    history: [], fails: 0, hintUntil: 0
   };
   var reduceMotion = window.matchMedia
     ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
@@ -672,9 +725,36 @@
 
   function level() { return LEVELS[state.level]; }
 
+  // Ångra sparar bygget som det såg ut före varje ändring: delarnas läge och
+  // vad som ligger kvar i hyllan.
+  function snapshot() {
+    state.history.push({
+      parts: state.parts.map(function (p) { return { type: p.type, x: p.x, y: p.y, a: p.a }; }),
+      tray: Object.assign({}, state.tray)
+    });
+    if (state.history.length > 40) state.history.shift();
+  }
+  function undo() {
+    if (state.running || !state.history.length) return;
+    var h = state.history.pop();
+    state.parts = h.parts;
+    state.tray = h.tray;
+    state.selected = null;
+    state.drag = null;
+    rebuildEngine();
+    Sound.remove();
+    syncUI();
+    render();
+  }
+
   function rebuildEngine() {
     state.engine = newEngine(level(), state.parts);
     state.ball = null;
+    // räknas om här i stället för varje bildruta: bygget ändras bara när
+    // spelaren rör en del, och det är precis då den här funktionen körs
+    state.blocked = state.parts.filter(function (p) {
+      return isBlocked(p, level(), state.parts);
+    });
     // anslagsljudet behöver veta hur hårt kulan slog i, och farten efter
     // kollisionen är redan dämpad — därför mäts den innan varje steg
     M.Events.on(state.engine, "collisionStart", function (ev) {
@@ -702,6 +782,9 @@
     if (!keepGhost) state.ghost = [];
     state.sparks = [];
     state.stars = level().stars.map(function (s) { return { x: s.x, y: s.y, got: false, pop: 0 }; });
+    state.history = [];
+    state.fails = 0;
+    state.hintUntil = 0;
     rebuildEngine();
     buildSlots();
     veil(false);
@@ -763,6 +846,7 @@
         "cup-missing-stars": ["Stjärna kvar", "Kulan landade rätt, men alla stjärnor måste tas först."],
         "timeout": ["Tiden rann ut", "Kulan kom aldrig fram. Bygg om banan."]
       }[kind];
+      state.fails++;
       veil(true, texts[0], texts[1], "Försök igen");
       state.shake = (kind === "cup-missing-stars" || reduceMotion) ? 0 : 8;
     }
@@ -1062,10 +1146,32 @@
     });
     drawCup(lv.cup);
     state.stars.forEach(drawStar);
+    var blocked = state.blocked;
     state.parts.forEach(function (p) {
       var s = PARTS[p.type];
       drawPlank(p.x, p.y, s.w, s.h, p.a * Math.PI / 180, p.type, p === state.selected);
+      if (blocked.indexOf(p) >= 0) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.a * Math.PI / 180);
+        ctx.fillStyle = "rgba(198,50,38,.42)";
+        roundRect(-s.w / 2, -s.h / 2, s.w, s.h, 3); ctx.fill();
+        ctx.strokeStyle = "#C63226"; ctx.lineWidth = 2.5;
+        roundRect(-s.w / 2 - 2, -s.h / 2 - 2, s.w + 4, s.h + 4, 4); ctx.stroke();
+        ctx.restore();
+      }
     });
+    if (state.hintUntil > Date.now() && level().solution.length) {
+      var hp = level().solution[0], hs = PARTS[hp.type];
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.setLineDash([7, 6]);
+      ctx.translate(hp.x, hp.y);
+      ctx.rotate(hp.a * Math.PI / 180);
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 3;
+      roundRect(-hs.w / 2, -hs.h / 2, hs.w, hs.h, 3); ctx.stroke();
+      ctx.restore();
+    }
     if (state.selected && !state.running) drawHandles(state.selected);
     if (state.trail.length && state.running) drawDots(state.trail, .5);
     state.sparks.forEach(function (sp) {
@@ -1134,16 +1240,19 @@
     if (state.selected) {
       var h = handlePoints(state.selected);
       if (Math.hypot(pt.x - h.rot.x, pt.y - h.rot.y) < 20) {
+        snapshot();
         state.drag = { mode: "rot", part: state.selected, lastA: state.selected.a };
         return;
       }
       if (Math.hypot(pt.x - h.del.x, pt.y - h.del.y) < 20) {
+        snapshot();
         removePart(state.selected); return;
       }
     }
     var hit = hitPart(pt);
     if (hit) {
       if (state.selected !== hit) Sound.lift();
+      snapshot();
       state.selected = hit;
       state.drag = { mode: "move", part: hit, dx: hit.x - pt.x, dy: hit.y - pt.y };
     } else {
@@ -1259,6 +1368,7 @@
       b.addEventListener("pointerdown", function (ev) {
         if (state.running || !state.tray[kind]) return;
         ev.preventDefault();
+        snapshot();
         state.tray[kind]--;
         Sound.lift();
         var pt = toBoard(ev);
@@ -1303,9 +1413,15 @@
       el.setAttribute("aria-current", i === state.level ? "true" : "false");
       el.disabled = i > unlocked;
     });
-    playBtn.disabled = state.running;
+    var jammed = state.blocked.length > 0;
+    warnEl.hidden = !jammed || state.running;
+    playBtn.disabled = state.running || jammed;
     playBtn.textContent = state.running ? "Rullar…" : "Spela";
+    playBtn.title = jammed ? "Flytta delen som sitter i vägen först" : "";
     resetBtn.disabled = false;
+    undoBtn.disabled = state.running || !state.history.length;
+    // ledtråden erbjuds först när banan faktiskt gjort motstånd
+    hintBtn.hidden = state.fails < 3 || state.running || !level().solution.length;
   }
 
   var muteBtn = document.getElementById("mute");
@@ -1327,6 +1443,104 @@
     }, { once: true });
   });
 
+  var undoBtn = document.getElementById("undo");
+  var hintBtn = document.getElementById("hint");
+  var warnEl = document.getElementById("warn");
+  undoBtn.addEventListener("click", undo);
+  hintBtn.addEventListener("click", function () {
+    state.hintUntil = Date.now() + 6000;
+    say("Ledtråden visar var den första delen ska sitta.");
+    render();
+  });
+
+  /**
+   * Hela spelet går att bygga från tangentbordet. Siffrorna tar en del ur
+   * hyllan, pilarna flyttar den markerade delen, komma och punkt vrider.
+   */
+  var KEY_STEP = 6;
+  window.addEventListener("keydown", function (ev) {
+    if (ev.metaKey || ev.ctrlKey) {
+      if (ev.key === "z" || ev.key === "Z") { ev.preventDefault(); undo(); }
+      return;
+    }
+    if (ev.altKey) return;
+    var tag = ev.target && ev.target.tagName;
+    // låt Enter och mellanslag göra sitt på en fokuserad knapp
+    var onButton = tag === "BUTTON" || tag === "SUMMARY" || tag === "A";
+    var p = state.selected;
+
+    if (ev.key >= "1" && ev.key <= "9") {
+      var kinds = Object.keys(level().tray);
+      var kind = kinds[Number(ev.key) - 1];
+      if (!kind || state.running || !state.tray[kind]) return;
+      ev.preventDefault();
+      snapshot();
+      state.tray[kind]--;
+      var np = { type: kind, x: W / 2, y: H / 2, a: 0 };
+      // lägg den inte ovanpå en annan del man just placerat
+      while (state.parts.some(function (q) { return Math.hypot(q.x - np.x, q.y - np.y) < 30; })) np.y += 34;
+      state.parts.push(np);
+      state.selected = np;
+      rebuildEngine();
+      Sound.place();
+      say(PARTS[kind].name + " placerad mitt på brädan. Flytta med piltangenterna.");
+      syncUI(); render();
+      return;
+    }
+
+    if (p && !state.running) {
+      var step = ev.shiftKey ? 1 : KEY_STEP, moved = true;
+      switch (ev.key) {
+        case "ArrowLeft":  p.x -= step; break;
+        case "ArrowRight": p.x += step; break;
+        case "ArrowUp":    p.y -= step; break;
+        case "ArrowDown":  p.y += step; break;
+        case ",": case "<": p.a = (p.a - 5) % 360; Sound.turn(); break;
+        case ".": case ">": p.a = (p.a + 5) % 360; Sound.turn(); break;
+        case "Delete": case "Backspace": snapshot(); removePart(p); render(); return;
+        default: moved = false;
+      }
+      if (moved) {
+        ev.preventDefault();
+        clampPart(p);
+        rebuildEngine();
+        syncUI();
+        render();
+        return;
+      }
+    }
+
+    switch (ev.key) {
+      case "Enter":
+        if (onButton) return;
+        ev.preventDefault();
+        if (!playBtn.disabled) startRun();
+        break;
+      case " ":
+        if (onButton) return;
+        ev.preventDefault();
+        if (state.running) { resetRun(); render(); } else if (!playBtn.disabled) startRun();
+        break;
+      case "r": case "R":
+        resetRun(); render(); break;
+      case "m": case "M":
+        Sound.toggle(); paintMute(); break;
+      case "Escape":
+        if (state.selected) { state.selected = null; render(); }
+        break;
+      case "Tab":
+        return;                       // låt fokus vandra som vanligt
+      case "s": case "S": {
+        if (state.running || !state.parts.length) return;
+        var i = state.parts.indexOf(state.selected);
+        state.selected = state.parts[(i + 1) % state.parts.length];
+        Sound.lift();
+        render();
+        break;
+      }
+    }
+  });
+
   playBtn.addEventListener("click", startRun);
   resetBtn.addEventListener("click", function () { resetRun(); render(); });
   window.addEventListener("resize", fitCanvas);
@@ -1341,6 +1555,9 @@
   window.__kulbanan = {
     levels: LEVELS,
     simulate: simulate,
+    isBlocked: function (levelIndex, parts) {
+      return parts.map(function (p) { return isBlocked(p, LEVELS[levelIndex], parts); });
+    },
     applySolution: function () {
       state.parts = level().solution.map(function (p) { return { type: p.type, x: p.x, y: p.y, a: p.a }; });
       state.parts.forEach(function (p) { state.tray[p.type]--; });
