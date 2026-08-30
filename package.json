@@ -1,0 +1,12 @@
+{
+  "name": "amazing-alex",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kulbanan — ett fysikpussel av Rube Goldberg-typ",
+  "scripts": {
+    "test": "node tools/verify.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}
