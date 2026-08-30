@@ -233,6 +233,15 @@
   .btn.go:active { transform: translateY(1px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, black); }
   .btn[disabled] { opacity: .4; cursor: not-allowed; }
 
+  .btn.icon { padding: 10px 13px; font-size: 16px; line-height: 1; min-width: 44px; }
+  .btn.icon[aria-pressed="true"] { color: var(--ink-soft); }
+
+  .sr {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
   details.help { border-top: 1px solid var(--line); padding-top: 10px; }
   details.help summary {
     cursor: pointer;
@@ -281,9 +290,13 @@
 
   <div class="bench">
     <div class="slots" id="slots"></div>
+    <button class="btn icon" id="mute" aria-pressed="false" title="Ljud av/på">
+      <span id="muteGlyph" aria-hidden="true">♪</span><span class="sr">Ljud</span>
+    </button>
     <button class="btn" id="reset">Börja om</button>
     <button class="btn go" id="play">Spela</button>
   </div>
+  <p class="sr" id="status" role="status" aria-live="polite"></p>
 
   <details class="help">
     <summary>Så spelar du</summary>
@@ -320,6 +333,135 @@
     document.getElementById("veilBtn").addEventListener("click", function () { location.reload(); });
     return;
   }
+  /**
+   * Ljudet är syntat i webbläsaren — inga ljudfiler att ladda, och inget som
+   * kan sluta fungera för att en extern värd inte svarar. Kontexten skapas
+   * först vid en riktig användargest, annars blockerar webbläsaren den.
+   */
+  var Sound = (function () {
+    var ctx = null, master = null, rollGain = null, rollSrc = null, muted = false;
+    try { muted = localStorage.getItem("kulbanan.muted") === "1"; } catch (e) {}
+
+    function ensure() {
+      if (ctx) { if (ctx.state === "suspended") ctx.resume(); return ctx; }
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ctx = new AC(); } catch (e) { return null; }
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 0.34;
+      master.connect(ctx.destination);
+      return ctx;
+    }
+
+    function env(node, t0, attack, hold, release, peak) {
+      var g = node.gain;
+      g.setValueAtTime(0.0001, t0);
+      g.exponentialRampToValueAtTime(Math.max(peak, 0.0002), t0 + attack);
+      g.setValueAtTime(Math.max(peak, 0.0002), t0 + attack + hold);
+      g.exponentialRampToValueAtTime(0.0001, t0 + attack + hold + release);
+    }
+
+    function tone(o) {
+      if (!ensure() || muted) return;
+      var t0 = ctx.currentTime + (o.delay || 0);
+      var osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = o.type || "sine";
+      osc.frequency.setValueAtTime(o.from, t0);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + o.dur);
+      env(g, t0, 0.006, o.dur * 0.35, o.dur * 0.65, o.gain == null ? 0.3 : o.gain);
+      osc.connect(g); g.connect(master);
+      osc.start(t0); osc.stop(t0 + o.dur + 0.05);
+    }
+
+    var noiseBuf = null;
+    function noiseBuffer() {
+      if (noiseBuf) return noiseBuf;
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      var d = noiseBuf.getChannelData(0), last = 0;
+      for (var i = 0; i < d.length; i++) {
+        // brunt brus: mjukare än vitt, låter mer som trä och gummi
+        last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+        d[i] = last * 3.2;
+      }
+      return noiseBuf;
+    }
+
+    function noise(o) {
+      if (!ensure() || muted) return;
+      var t0 = ctx.currentTime + (o.delay || 0);
+      var src = ctx.createBufferSource(); src.buffer = noiseBuffer();
+      var f = ctx.createBiquadFilter();
+      f.type = o.filter || "bandpass";
+      f.frequency.value = o.freq || 800;
+      f.Q.value = o.q || 1;
+      var g = ctx.createGain();
+      env(g, t0, 0.004, o.dur * 0.2, o.dur * 0.8, o.gain == null ? 0.25 : o.gain);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t0); src.stop(t0 + o.dur + 0.05);
+    }
+
+    // kulans rull-ljud ligger och går; bara volymen ändras med farten
+    function roll(level) {
+      if (!ensure() || muted) { return; }
+      if (!rollSrc) {
+        rollSrc = ctx.createBufferSource();
+        rollSrc.buffer = noiseBuffer();
+        rollSrc.loop = true;
+        var f = ctx.createBiquadFilter();
+        f.type = "bandpass"; f.frequency.value = 420; f.Q.value = 0.9;
+        rollGain = ctx.createGain(); rollGain.gain.value = 0;
+        rollSrc.connect(f); f.connect(rollGain); rollGain.connect(master);
+        rollSrc.start();
+      }
+      rollGain.gain.setTargetAtTime(Math.min(level, 1) * 0.16, ctx.currentTime, 0.05);
+    }
+
+    return {
+      place:  function () { noise({ dur: 0.09, freq: 420, gain: 0.3 }); tone({ from: 180, to: 120, dur: 0.1, type: "triangle", gain: 0.22 }); },
+      turn:   function () { tone({ from: 940, dur: 0.03, type: "square", gain: 0.05 }); },
+      lift:   function () { tone({ from: 300, to: 460, dur: 0.07, type: "triangle", gain: 0.12 }); },
+      remove: function () { tone({ from: 420, to: 140, dur: 0.14, type: "sawtooth", gain: 0.14 }); },
+      release: function () { noise({ dur: 0.06, freq: 1600, gain: 0.2 }); tone({ from: 900, to: 600, dur: 0.06, type: "square", gain: 0.1 }); },
+      hit: function (v) {
+        var k = Math.min(v / 9, 1);
+        if (k < 0.12) return;
+        noise({ dur: 0.05 + k * 0.06, freq: 300 + k * 900, gain: 0.06 + k * 0.22 });
+        tone({ from: 150 - k * 40, dur: 0.09, type: "sine", gain: 0.05 + k * 0.16 });
+      },
+      boing: function () {
+        tone({ from: 760, to: 220, dur: 0.22, type: "triangle", gain: 0.3 });
+        tone({ from: 380, to: 130, dur: 0.24, type: "sine", gain: 0.16, delay: 0.01 });
+      },
+      star: function (n) {
+        var f = [880, 1108, 1318, 1568][Math.min(n, 3)];
+        tone({ from: f, dur: 0.1, type: "triangle", gain: 0.22 });
+        tone({ from: f * 2, dur: 0.13, type: "sine", gain: 0.12, delay: 0.04 });
+      },
+      cup: function () {
+        tone({ from: 240, to: 190, dur: 0.16, type: "sine", gain: 0.26 });
+        noise({ dur: 0.1, freq: 700, gain: 0.16, delay: 0.01 });
+      },
+      win: function () {
+        [523, 659, 784, 1046].forEach(function (f, i) {
+          tone({ from: f, dur: 0.26, type: "triangle", gain: 0.2, delay: i * 0.09 });
+        });
+      },
+      fail: function () {
+        tone({ from: 300, to: 110, dur: 0.42, type: "sawtooth", gain: 0.16 });
+      },
+      roll: roll,
+      wake: function () { ensure(); },
+      muted: function () { return muted; },
+      toggle: function () {
+        muted = !muted;
+        try { localStorage.setItem("kulbanan.muted", muted ? "1" : "0"); } catch (e) {}
+        if (master) master.gain.setTargetAtTime(muted ? 0 : 0.34, ctx.currentTime, 0.02);
+        if (!muted) ensure();
+        return muted;
+      }
+    };
+  })();
+
   var M = window.Matter;
   var W = 960, H = 640;
   var BALL_R = 15;
@@ -442,7 +584,7 @@
     var s = PARTS[p.type];
     return M.Bodies.rectangle(p.x, p.y, s.w, s.h, {
       isStatic: true, angle: p.a * Math.PI / 180,
-      friction: s.fric, restitution: s.rest, label: "part"
+      friction: s.fric, restitution: s.rest, label: "part:" + p.type
     });
   }
   function makeBall(spawn) {
@@ -517,8 +659,11 @@
     level: 0, parts: [], tray: {}, engine: null, ball: null,
     running: false, selected: null, drag: null,
     stars: [], trail: [], ghost: [], sparks: [],
-    inside: 0, still: 0, ticks: 0, ended: null, shake: 0
+    inside: 0, still: 0, ticks: 0, ended: null, shake: 0,
+    hatch: 0, gotCount: 0, lastSpeed: 0, flash: 0
   };
+  var reduceMotion = window.matchMedia
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
   var unlocked = 0;
   try {
     var saved = parseInt(localStorage.getItem("kulbanan.progress") || "0", 10);
@@ -530,6 +675,19 @@
   function rebuildEngine() {
     state.engine = newEngine(level(), state.parts);
     state.ball = null;
+    // anslagsljudet behöver veta hur hårt kulan slog i, och farten efter
+    // kollisionen är redan dämpad — därför mäts den innan varje steg
+    M.Events.on(state.engine, "collisionStart", function (ev) {
+      for (var i = 0; i < ev.pairs.length; i++) {
+        var pair = ev.pairs[i];
+        var other = pair.bodyA.label === "ball" ? pair.bodyB
+                  : pair.bodyB.label === "ball" ? pair.bodyA : null;
+        if (!other) continue;
+        if (other.label === "part:bounce") Sound.boing();
+        else if (other.label === "cup") Sound.cup();
+        else Sound.hit(state.lastSpeed);
+      }
+    });
   }
 
   function loadLevel(i, keepGhost) {
@@ -552,6 +710,7 @@
   }
 
   function resetRun() {
+    Sound.roll(0);
     state.running = false;
     state.ended = null;
     state.ball = null;
@@ -575,6 +734,10 @@
     state.inside = 0; state.still = 0; state.ticks = 0;
     state.ended = null;
     state.running = true;
+    state.gotCount = 0;
+    state.lastSpeed = 0;
+    state.hatch = reduceMotion ? 0 : 1;
+    Sound.release();
     syncUI();
   }
 
@@ -582,6 +745,8 @@
     state.running = false;
     state.ended = kind;
     state.ghost = state.trail.slice();
+    Sound.roll(0);
+    if (kind === "win") Sound.win(); else Sound.fail();
     if (kind === "win") {
       if (state.level >= unlocked && state.level + 1 < LEVELS.length) {
         unlocked = state.level + 1;
@@ -599,13 +764,15 @@
         "timeout": ["Tiden rann ut", "Kulan kom aldrig fram. Bygg om banan."]
       }[kind];
       veil(true, texts[0], texts[1], "Försök igen");
-      state.shake = kind === "cup-missing-stars" ? 0 : 8;
+      state.shake = (kind === "cup-missing-stars" || reduceMotion) ? 0 : 8;
     }
     syncUI();
   }
 
   function tick() {
     if (!state.running || !state.ball) return;
+    var v0 = state.ball.velocity;
+    state.lastSpeed = Math.hypot(v0.x, v0.y);
     stepPhysics(state.engine, state.ball);
     var p = state.ball.position;
     state.ticks++;
@@ -616,7 +783,9 @@
     state.stars.forEach(function (s) {
       if (!s.got && Math.hypot(p.x - s.x, p.y - s.y) < 27) {
         s.got = true; s.pop = 1;
-        for (var i = 0; i < 12; i++) {
+        Sound.star(state.gotCount++);
+        state.flash = reduceMotion ? 0 : 1;
+        for (var i = 0; i < (reduceMotion ? 0 : 12); i++) {
           var an = Math.PI * 2 * i / 12;
           state.sparks.push({ x: s.x, y: s.y, vx: Math.cos(an) * 2.4, vy: Math.sin(an) * 2.4, life: 1 });
         }
@@ -626,6 +795,7 @@
     if (inCup(level().cup, p)) {
       if (++state.inside > 10) return finish(all ? "win" : "cup-missing-stars");
     } else state.inside = 0;
+    Sound.roll(Math.max(0, Math.hypot(state.ball.velocity.x, state.ball.velocity.y) - 0.6) / 7);
     if (p.y > H + 90 || p.x < -70 || p.x > W + 70) return finish("fell");
     state.still = Math.hypot(state.ball.velocity.x, state.ball.velocity.y) < 0.22 ? state.still + 1 : 0;
     if (state.still > 110) return finish("stall");
@@ -774,8 +944,15 @@
       ctx.beginPath(); ctx.moveTo(x, -12); ctx.lineTo(x, 10); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 5, 4); ctx.lineTo(x, 11); ctx.lineTo(x + 5, 4); ctx.stroke();
     }
+    // luckan slår upp i samma ögonblick som kulan släpps
+    ctx.save();
+    ctx.translate(-44, 28);
+    ctx.rotate(-state.hatch * 1.15);
     ctx.fillStyle = C.plyEdge;
-    ctx.fillRect(-44, 28, 88, 6);
+    ctx.fillRect(0, 0, 88, 6);
+    ctx.fillStyle = "rgba(255,255,255,.18)";
+    ctx.fillRect(0, 0, 88, 2);
+    ctx.restore();
     ctx.restore();
   }
 
@@ -844,7 +1021,8 @@
     ctx.restore();
   }
 
-  function drawBall(p) {
+  function drawBall(body) {
+    var p = body.position;
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,.28)";
     ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 4, BALL_R, BALL_R, 0, 0, 6.2832); ctx.fill();
@@ -852,8 +1030,16 @@
     g.addColorStop(0, "#FFFFFF"); g.addColorStop(.35, C.ball); g.addColorStop(1, "#5D6874");
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(p.x, p.y, BALL_R, 0, 6.2832); ctx.fill();
+    // en fräst skåra över kulan: utan den syns det inte att den rullar
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(body.angle);
+    ctx.strokeStyle = "rgba(40,48,58,.55)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(0, 0, BALL_R - 5, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, BALL_R - 5, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+    ctx.restore();
     ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x, p.y, BALL_R, 0, 6.2832); ctx.stroke();
     ctx.restore();
   }
 
@@ -889,7 +1075,14 @@
       ctx.beginPath(); ctx.arc(sp.x, sp.y, 3, 0, 6.2832); ctx.fill();
       ctx.restore();
     });
-    if (state.ball) drawBall(state.ball.position);
+    if (state.ball) drawBall(state.ball);
+    if (state.flash > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = state.flash * 0.18;
+      ctx.fillStyle = C.star;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
     if (state.drag && state.drag.mode === "new") {
       var ds = PARTS[state.drag.part.type];
       ctx.save(); ctx.globalAlpha = .75;
@@ -907,6 +1100,8 @@
     });
     if (state.shake > 0) state.shake *= 0.86;
     if (state.shake < 0.2) state.shake = 0;
+    if (state.hatch > 0) state.hatch = Math.max(0, state.hatch - 0.035);
+    if (state.flash > 0) state.flash = Math.max(0, state.flash - 0.08);
     render();
     requestAnimationFrame(frame);
   }
@@ -939,7 +1134,8 @@
     if (state.selected) {
       var h = handlePoints(state.selected);
       if (Math.hypot(pt.x - h.rot.x, pt.y - h.rot.y) < 20) {
-        state.drag = { mode: "rot", part: state.selected }; return;
+        state.drag = { mode: "rot", part: state.selected, lastA: state.selected.a };
+        return;
       }
       if (Math.hypot(pt.x - h.del.x, pt.y - h.del.y) < 20) {
         removePart(state.selected); return;
@@ -947,6 +1143,7 @@
     }
     var hit = hitPart(pt);
     if (hit) {
+      if (state.selected !== hit) Sound.lift();
       state.selected = hit;
       state.drag = { mode: "move", part: hit, dx: hit.x - pt.x, dy: hit.y - pt.y };
     } else {
@@ -962,6 +1159,7 @@
     if (d.mode === "rot") {
       var deg = Math.atan2(pt.y - d.part.y, pt.x - d.part.x) * 180 / Math.PI;
       d.part.a = Math.round(deg / 5) * 5;
+      if (d.part.a !== d.lastA) { d.lastA = d.part.a; Sound.turn(); }
     } else {
       d.part.x = pt.x + (d.dx || 0);
       d.part.y = pt.y + (d.dy || 0);
@@ -984,8 +1182,10 @@
         state.parts.push(d.part);
         state.selected = d.part;
         rebuildEngine();
+        Sound.place();
       } else {
         state.tray[d.part.type]++;
+        Sound.remove();
       }
       syncUI();
     }
@@ -1008,6 +1208,7 @@
     if (i < 0) return;
     state.parts.splice(i, 1);
     state.tray[p.type]++;
+    Sound.remove();
     state.selected = null;
     state.drag = null;
     rebuildEngine();
@@ -1025,12 +1226,16 @@
   var veilText = document.getElementById("veilText");
   var veilBtn = document.getElementById("veilBtn");
 
+  var statusEl = document.getElementById("status");
+  function say(msg) { if (statusEl) statusEl.textContent = msg; }
+
   function veil(open, title, text, btn) {
     veilEl.setAttribute("data-open", open ? "true" : "false");
     if (open) {
       veilTitle.textContent = title;
       veilText.textContent = text;
       veilBtn.textContent = btn;
+      say(title + " " + text);
       veilBtn.focus({ preventScroll: true });
     }
   }
@@ -1055,6 +1260,7 @@
         if (state.running || !state.tray[kind]) return;
         ev.preventDefault();
         state.tray[kind]--;
+        Sound.lift();
         var pt = toBoard(ev);
         state.drag = { mode: "new", part: { type: kind, x: pt.x, y: pt.y, a: 0 } };
         state.selected = null;
@@ -1079,6 +1285,12 @@
   }
 
   function syncUI() {
+    canvas.setAttribute("aria-label",
+      "Spelplan, bana " + (state.level + 1) + ": " + level().name + ". " +
+      state.stars.length + (state.stars.length === 1 ? " stjärna" : " stjärnor") + " att ta. " +
+      state.parts.length + " av " + Object.keys(level().tray).reduce(function (n, k) {
+        return n + level().tray[k];
+      }, 0) + " delar utplacerade.");
     document.getElementById("lvlName").textContent = "Bana " + (state.level + 1) + " · " + level().name;
     document.getElementById("taskHint").textContent = level().hint;
     Array.prototype.forEach.call(slotsEl.children, function (el) {
@@ -1095,6 +1307,25 @@
     playBtn.textContent = state.running ? "Rullar…" : "Spela";
     resetBtn.disabled = false;
   }
+
+  var muteBtn = document.getElementById("mute");
+  var muteGlyph = document.getElementById("muteGlyph");
+  function paintMute() {
+    var m = Sound.muted();
+    muteBtn.setAttribute("aria-pressed", m ? "true" : "false");
+    muteGlyph.textContent = m ? "♪̸" : "♪";
+    muteBtn.title = m ? "Slå på ljudet" : "Stäng av ljudet";
+  }
+  muteBtn.addEventListener("click", function () { Sound.toggle(); paintMute(); });
+  paintMute();
+
+  // webbläsare startar inte ljud utan en användargest — den första duger
+  ["pointerdown", "keydown"].forEach(function (e) {
+    window.addEventListener(e, function once() {
+      Sound.wake();
+      window.removeEventListener(e, once);
+    }, { once: true });
+  });
 
   playBtn.addEventListener("click", startRun);
   resetBtn.addEventListener("click", function () { resetRun(); render(); });
