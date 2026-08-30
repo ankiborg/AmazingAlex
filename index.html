@@ -214,6 +214,19 @@
   .slot[data-kind="plank"] .pic i { width: 44px; height: 8px; }
   .slot[data-kind="short"] .pic i { width: 26px; height: 8px; }
   .slot[data-kind="bounce"] .pic i { width: 30px; height: 9px; background: linear-gradient(180deg, #4A464F, var(--rubber)); }
+  .slot[data-kind="funnel"] .pic i {
+    width: 30px; height: 20px;
+    clip-path: polygon(0 0, 16% 0, 45% 72%, 55% 72%, 84% 0, 100% 0, 62% 100%, 38% 100%);
+  }
+  .slot[data-kind="seesaw"] .pic i {
+    width: 40px; height: 7px;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.14), 0 5px 0 -3px var(--steel);
+  }
+  .slot[data-kind="fan"] .pic i {
+    width: 26px; height: 17px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #A9B3C0, #65707E);
+  }
   .slot .name { font-size: 13px; font-weight: 500; }
   .slot .n {
     font-family: "DM Mono", ui-monospace, monospace;
@@ -502,11 +515,36 @@
   var W = 960, H = 640;
   var BALL_R = 15;
 
+  /**
+   * w/h är delens yttermått — det som avgör om den sitter i vägen och hur
+   * greppen placeras. Plankorna är enkla lådor; tratten är två plankor i en
+   * V-form, vippan hänger på en tapp och söker sitt eget läge, och fläkten
+   * har en kropp att studsa mot plus ett kraftfält framför sig.
+   */
   var PARTS = {
-    plank:  { w: 214, h: 16, name: "Planka",     rest: 0.14, fric: 0.06 },
-    short:  { w: 118, h: 16, name: "Kort planka",rest: 0.14, fric: 0.06 },
-    bounce: { w: 98,  h: 20, name: "Studsmatta", rest: 0.98, fric: 0.02 }
+    plank:  { w: 214, h: 16, name: "Planka",      rest: 0.14, fric: 0.06 },
+    short:  { w: 118, h: 16, name: "Kort planka", rest: 0.14, fric: 0.06 },
+    bounce: { w: 98,  h: 20, name: "Studsmatta",  rest: 0.98, fric: 0.02 },
+    funnel: { w: 160, h: 96, name: "Tratt",       rest: 0.08, fric: 0.05, arm: 104, spread: 34 },
+    seesaw: { w: 184, h: 14, name: "Vippa",       rest: 0.10, fric: 0.09, pivot: true },
+    fan:    { w: 76,  h: 48, name: "Fläkt",       rest: 0.2,  fric: 0.2,
+              reach: 190, width: 44, push: 0.0026 }
   };
+
+  // Trattens två armar, i delens eget koordinatsystem: en V som fångar en kula
+  // uppifrån och släpper den genom en 40 px bred hals.
+  function funnelArms() {
+    var s = PARTS.funnel, r = s.spread * Math.PI / 180;
+    var half = s.arm / 2;
+    return [-1, 1].map(function (side) {
+      return {
+        x: side * (20 + Math.sin(r) * half),
+        y: -Math.cos(r) * half + s.h / 2,
+        w: s.arm, h: 14,
+        a: side * (90 - s.spread)
+      };
+    });
+  }
 
   // ---------------------------------------------------------------- levels
   // fixed: plywood already nailed to the wall. cup: {x, y} = centre of the
@@ -593,6 +631,56 @@
         { type: "bounce", x: 379, y: 367, a: 60 },
         { type: "short", x: 446, y: 345, a: 0 }
       ]
+    },
+    {
+      name: "Genom halsen",
+      hint: "Springan är smalare än ditt sikte.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 222, y: 280, w: 20, h: 130, a: 0 },
+        { x: 302, y: 280, w: 20, h: 130, a: 0 },
+        { x: 547, y: 417, w: 600, h: 16, a: 8 }
+      ],
+      cup: { x: 844, y: 569 },
+      stars: [ { x: 311, y: 200 } ],
+      tray: { funnel: 1, short: 1 },
+      solution: [
+        { type: "funnel", x: 100, y: 283, a: -45 },
+        { type: "short", x: 199, y: 161, a: 25 }
+      ]
+    },
+    {
+      name: "Fläkten",
+      hint: "Luft bär längre än trä.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 230, y: 560, w: 340, h: 16, a: 0 },
+        { x: 420, y: 400, w: 24, h: 300, a: 0 },
+        { x: 700, y: 420, w: 300, h: 16, a: 8 }
+      ],
+      cup: { x: 849, y: 551 },
+      stars: [ { x: 370, y: 181 }, { x: 524, y: 261 } ],
+      tray: { fan: 1, plank: 1 },
+      solution: [
+        { type: "fan", x: 95, y: 155, a: 70 },
+        { type: "plank", x: 197, y: 257, a: -55 }
+      ]
+    },
+    {
+      name: "Vippan",
+      hint: "Vippan hittar sitt eget läge när kulan lägger sig på den.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 300, y: 340, w: 360, h: 16, a: 12 },
+        { x: 712, y: 436, w: 320, h: 16, a: 8 }
+      ],
+      cup: { x: 870, y: 569 },
+      stars: [ { x: 322, y: 319 }, { x: 466, y: 352 } ],
+      tray: { seesaw: 1, short: 1 },
+      solution: [
+        { type: "seesaw", x: 201, y: 240, a: 50 },
+        { type: "short", x: 504, y: 401, a: -10 }
+      ]
     }
   ];
 
@@ -615,26 +703,53 @@
       friction: 0.07, restitution: 0.12, label: "fixed"
     });
   }
-  function partBody(p) {
-    var s = PARTS[p.type];
-    return M.Bodies.rectangle(p.x, p.y, s.w, s.h, {
-      isStatic: true, angle: p.a * Math.PI / 180,
+  // En del kan bestå av flera kroppar (tratten) och behöver inte vara fast
+  // (vippan). `live` är sant under ett försök: då släpps det som ska röra sig
+  // loss. I byggläget står allt still så att lägeskontrollen fungerar.
+  function partBodies(p, live) {
+    var s = PARTS[p.type], rad = p.a * Math.PI / 180;
+    var common = {
       friction: s.fric, restitution: s.rest, label: "part:" + p.type
-    });
+    };
+    if (p.type === "funnel") {
+      return funnelArms().map(function (arm) {
+        var c = Math.cos(rad), sn = Math.sin(rad);
+        return M.Bodies.rectangle(
+          p.x + arm.x * c - arm.y * sn,
+          p.y + arm.x * sn + arm.y * c,
+          arm.w, arm.h,
+          Object.assign({ isStatic: true, angle: rad + arm.a * Math.PI / 180 }, common)
+        );
+      });
+    }
+    if (s.pivot) {
+      // vippan hänger på en tapp i mitten och söker sitt eget läge så fort
+      // kulan lägger sig på ena änden; i byggläget står den stilla
+      return [M.Bodies.rectangle(p.x, p.y, s.w, s.h, Object.assign({
+        isStatic: !live, angle: rad, density: 0.0011, frictionAir: 0.055
+      }, common))];
+    }
+    return [M.Bodies.rectangle(p.x, p.y, s.w, s.h,
+      Object.assign({ isStatic: true, angle: rad }, common))];
   }
+  function partBody(p) { return partBodies(p, false)[0]; }
   // En del får inte sitta inuti något annat. Väggarna räknas inte — en planka
   // som sticker ut över kanten är harmlös — men fast plywood, koppen, lådan och
   // andra utplacerade delar gör att bygget inte går att spela.
   function blockers(level, parts, self) {
     var list = level.fixed.map(fixedBody).concat(cupBodies(level.cup));
     list.push(M.Bodies.rectangle(level.spawn.x, level.spawn.y - 46, 84, 70, { isStatic: true }));
-    parts.forEach(function (p) { if (p !== self) list.push(partBody(p)); });
+    parts.forEach(function (p) {
+      if (p !== self) list = list.concat(partBodies(p, false));
+    });
     return list;
   }
   function isBlocked(p, level, parts) {
-    var body = partBody(p), list = blockers(level, parts, p);
-    for (var i = 0; i < list.length; i++) {
-      if (M.Collision.collides(body, list[i])) return true;
+    var own = partBodies(p, false), list = blockers(level, parts, p);
+    for (var a = 0; a < own.length; a++) {
+      for (var i = 0; i < list.length; i++) {
+        if (M.Collision.collides(own[a], list[i])) return true;
+      }
     }
     return false;
   }
@@ -645,7 +760,7 @@
       density: 0.0018, slop: 0.02, label: "ball"
     });
   }
-  function newEngine(level, parts) {
+  function newEngine(level, parts, live) {
     var eng = M.Engine.create();
     eng.positionIterations = 10;
     eng.velocityIterations = 10;
@@ -654,9 +769,47 @@
       M.Bodies.rectangle(W + 30, H / 2, 60, H * 3, { isStatic: true, friction: 0.05, label: "wall" })
     ];
     var bodies = walls.concat(level.fixed.map(fixedBody), cupBodies(level.cup));
-    parts.forEach(function (p) { p.body = partBody(p); bodies.push(p.body); });
+    eng.fans = [];
+    parts.forEach(function (p) {
+      p.bodies = partBodies(p, live);
+      p.body = p.bodies[0];
+      bodies = bodies.concat(p.bodies);
+      if (p.type === "fan") eng.fans.push(p);
+      if (live && PARTS[p.type].pivot) {
+        bodies.push(M.Constraint.create({
+          pointA: { x: p.x, y: p.y },
+          bodyB: p.bodies[0],
+          pointB: { x: 0, y: 0 },
+          length: 0,
+          stiffness: 1,
+          render: { visible: false }
+        }));
+      }
+    });
     M.Composite.add(eng.world, bodies);
     return eng;
+  }
+
+  /**
+   * Fläkten blåser längs sin egen uppåtriktning. Kraften avtar med avståndet
+   * och verkar bara inom en smal ström — utanför den märks fläkten inte alls.
+   * Matter nollställer body.force efter varje uppdatering, så den läggs på
+   * inför varje delsteg.
+   */
+  function applyFans(eng, ball) {
+    if (!eng.fans || !eng.fans.length) return;
+    var s = PARTS.fan;
+    for (var i = 0; i < eng.fans.length; i++) {
+      var f = eng.fans[i], rad = f.a * Math.PI / 180;
+      var dx = Math.sin(rad), dy = -Math.cos(rad);
+      var rx = ball.position.x - f.x, ry = ball.position.y - f.y;
+      var along = rx * dx + ry * dy;
+      var across = Math.abs(-rx * dy + ry * dx);
+      if (along < 24 || along > s.reach || across > s.width) continue;
+      var k = 1 - (along - 24) / (s.reach - 24);
+      ball.force.x += dx * s.push * k;
+      ball.force.y += dy * s.push * k;
+    }
   }
 
   // One frame of physics: two 8.33 ms sub-steps, with a speed cap so a fast
@@ -668,6 +821,7 @@
       if (sp > MAX_STEP_SPEED) {
         M.Body.setVelocity(ball, { x: v.x / sp * MAX_STEP_SPEED, y: v.y / sp * MAX_STEP_SPEED });
       }
+      applyFans(eng, ball);
       M.Engine.update(eng, 1000 / 120);
     }
   }
@@ -676,7 +830,7 @@
   function simulate(levelIndex, parts, maxSteps) {
     var level = LEVELS[levelIndex];
     var copy = parts.map(function (p) { return { type: p.type, x: p.x, y: p.y, a: p.a }; });
-    var eng = newEngine(level, copy);
+    var eng = newEngine(level, copy, true);
     var ball = makeBall(level.spawn);
     M.Composite.add(eng.world, ball);
     var got = level.stars.map(function () { return false; });
@@ -755,9 +909,13 @@
     state.blocked = state.parts.filter(function (p) {
       return isBlocked(p, level(), state.parts);
     });
-    // anslagsljudet behöver veta hur hårt kulan slog i, och farten efter
-    // kollisionen är redan dämpad — därför mäts den innan varje steg
-    M.Events.on(state.engine, "collisionStart", function (ev) {
+    listenForImpacts(state.engine);
+  }
+
+  // anslagsljudet behöver veta hur hårt kulan slog i, och farten efter
+  // kollisionen är redan dämpad — därför mäts den innan varje steg
+  function listenForImpacts(eng) {
+    M.Events.on(eng, "collisionStart", function (ev) {
       for (var i = 0; i < ev.pairs.length; i++) {
         var pair = ev.pairs[i];
         var other = pair.bodyA.label === "ball" ? pair.bodyB
@@ -810,6 +968,8 @@
     if (state.running) return;
     state.selected = null;
     rebuildEngine();
+    state.engine = newEngine(level(), state.parts, true);
+    listenForImpacts(state.engine);
     state.ball = makeBall(level().spawn);
     M.Composite.add(state.engine.world, state.ball);
     state.stars.forEach(function (s) { s.got = false; s.pop = 0; });
@@ -950,8 +1110,10 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
+    // skuggans hörnradie följde tjockleken, vilket gjorde en 300 px hög pelare
+    // till en rundad klump i stället för en skugga
     ctx.fillStyle = "rgba(0,0,0,.22)";
-    roundRect(-w / 2 + 2, -h / 2 + 5, w, h, h / 2.6); ctx.fill();
+    roundRect(-w / 2 + 2, -h / 2 + 5, w, h, Math.min(w, h) / 2.6); ctx.fill();
     if (kind === "bounce") {
       var gb = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
       gb.addColorStop(0, "#54505C"); gb.addColorStop(1, C.rubber);
@@ -982,6 +1144,112 @@
       roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 5); ctx.stroke();
     }
     ctx.restore();
+  }
+
+  // Dominobrickan flyttar sig under försöket; övriga delar står där de nålats.
+  function partPose(p) {
+    var b = p.bodies && p.bodies[0];
+    if (state.running && b && !b.isStatic) {
+      return { x: b.position.x, y: b.position.y, a: b.angle };
+    }
+    return { x: p.x, y: p.y, a: p.a * Math.PI / 180 };
+  }
+
+  function drawFan(x, y, ang, sel) {
+    var s = PARTS.fan;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    // luftströmmen: streck som vandrar utåt medan kulan rullar
+    if (state.running && !reduceMotion) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.strokeStyle = "rgba(255,255,255,.75)";
+      ctx.lineWidth = 2; ctx.lineCap = "round";
+      for (var d = 0; d < 5; d++) {
+        var off = (state.ticks * 2.4 + d * 38) % s.reach;
+        var fade = 1 - off / s.reach;
+        ctx.globalAlpha = 0.45 * fade;
+        for (var side = -1; side <= 1; side++) {
+          ctx.beginPath();
+          ctx.moveTo(side * 22, -28 - off);
+          ctx.lineTo(side * 22, -44 - off);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+    ctx.fillStyle = "rgba(0,0,0,.24)";
+    roundRect(-s.w / 2 + 2, -s.h / 2 + 5, s.w, s.h, 6); ctx.fill();
+    var g = ctx.createLinearGradient(0, -s.h / 2, 0, s.h / 2);
+    g.addColorStop(0, "#A9B3C0"); g.addColorStop(1, "#65707E");
+    ctx.fillStyle = g;
+    roundRect(-s.w / 2, -s.h / 2, s.w, s.h, 6); ctx.fill();
+    // galler på utblåssidan
+    ctx.strokeStyle = "rgba(20,24,30,.55)"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    for (var i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 13, -s.h / 2 + 4);
+      ctx.lineTo(i * 13, -s.h / 2 + 14);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(20,24,30,.5)";
+    ctx.beginPath(); ctx.arc(0, 6, 9, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#D7DEE6";
+    ctx.beginPath(); ctx.arc(0, 6, 4, 0, 6.2832); ctx.fill();
+    if (sel) {
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5;
+      roundRect(-s.w / 2 - 3, -s.h / 2 - 3, s.w + 6, s.h + 6, 8); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPart(p, sel) {
+    var s = PARTS[p.type], pose = partPose(p);
+    if (p.type === "funnel") {
+      funnelArms().forEach(function (arm) {
+        var c = Math.cos(pose.a), sn = Math.sin(pose.a);
+        drawPlank(pose.x + arm.x * c - arm.y * sn,
+                  pose.y + arm.x * sn + arm.y * c,
+                  arm.w, arm.h, pose.a + arm.a * Math.PI / 180, "funnel", sel);
+      });
+      return;
+    }
+    if (p.type === "fan") return drawFan(pose.x, pose.y, pose.a, sel);
+    if (p.type === "seesaw") {
+      drawPlank(pose.x, pose.y, s.w, s.h, pose.a, "seesaw", sel);
+      // tappen ritas oroterad: den sitter i väggen, det är plankan som vrider sig
+      ctx.save();
+      ctx.translate(pose.x, pose.y);
+      ctx.fillStyle = "rgba(0,0,0,.28)";
+      ctx.beginPath();
+      ctx.moveTo(-17, 24); ctx.lineTo(17, 24); ctx.lineTo(0, -3); ctx.closePath(); ctx.fill();
+      var gs = ctx.createLinearGradient(0, -3, 0, 24);
+      gs.addColorStop(0, "#B4BDC8"); gs.addColorStop(1, "#6C7784");
+      ctx.fillStyle = gs;
+      ctx.beginPath();
+      ctx.moveTo(-15, 22); ctx.lineTo(15, 22); ctx.lineTo(0, -5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = C.steel;
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = "rgba(20,24,30,.45)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, 8, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.7)";
+      ctx.beginPath(); ctx.arc(-2.4, -2.4, 3, 0, 6.2832); ctx.fill();
+      ctx.restore();
+      return;
+    }
+    drawPlank(pose.x, pose.y, s.w, s.h, pose.a, p.type, sel);
+  }
+
+  // Röd markering runt varje kropp delen består av — tratten har två.
+  function outlineBlocked(p) {
+    partBodies(p, false).forEach(function (b) {
+      ctx.beginPath();
+      b.vertices.forEach(function (v, i) { ctx[i ? "lineTo" : "moveTo"](v.x, v.y); });
+      ctx.closePath();
+      ctx.fillStyle = "rgba(198,50,38,.42)"; ctx.fill();
+      ctx.strokeStyle = "#C63226"; ctx.lineWidth = 2.5; ctx.stroke();
+    });
   }
 
   function handlePoints(p) {
@@ -1148,28 +1416,20 @@
     state.stars.forEach(drawStar);
     var blocked = state.blocked;
     state.parts.forEach(function (p) {
-      var s = PARTS[p.type];
-      drawPlank(p.x, p.y, s.w, s.h, p.a * Math.PI / 180, p.type, p === state.selected);
-      if (blocked.indexOf(p) >= 0) {
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.a * Math.PI / 180);
-        ctx.fillStyle = "rgba(198,50,38,.42)";
-        roundRect(-s.w / 2, -s.h / 2, s.w, s.h, 3); ctx.fill();
-        ctx.strokeStyle = "#C63226"; ctx.lineWidth = 2.5;
-        roundRect(-s.w / 2 - 2, -s.h / 2 - 2, s.w + 4, s.h + 4, 4); ctx.stroke();
-        ctx.restore();
-      }
+      drawPart(p, p === state.selected);
+      if (blocked.indexOf(p) >= 0) outlineBlocked(p);
     });
     if (state.hintUntil > Date.now() && level().solution.length) {
-      var hp = level().solution[0], hs = PARTS[hp.type];
+      var hp = level().solution[0];
       ctx.save();
       ctx.globalAlpha = 0.45;
       ctx.setLineDash([7, 6]);
-      ctx.translate(hp.x, hp.y);
-      ctx.rotate(hp.a * Math.PI / 180);
       ctx.strokeStyle = C.accent; ctx.lineWidth = 3;
-      roundRect(-hs.w / 2, -hs.h / 2, hs.w, hs.h, 3); ctx.stroke();
+      partBodies(hp, false).forEach(function (b) {
+        ctx.beginPath();
+        b.vertices.forEach(function (v, i) { ctx[i ? "lineTo" : "moveTo"](v.x, v.y); });
+        ctx.closePath(); ctx.stroke();
+      });
       ctx.restore();
     }
     if (state.selected && !state.running) drawHandles(state.selected);
@@ -1190,9 +1450,8 @@
       ctx.restore();
     }
     if (state.drag && state.drag.mode === "new") {
-      var ds = PARTS[state.drag.part.type];
       ctx.save(); ctx.globalAlpha = .75;
-      drawPlank(state.drag.part.x, state.drag.part.y, ds.w, ds.h, state.drag.part.a * Math.PI / 180, state.drag.part.type, true);
+      drawPart(state.drag.part, true);
       ctx.restore();
     }
   }
@@ -1555,6 +1814,7 @@
   window.__kulbanan = {
     levels: LEVELS,
     simulate: simulate,
+    partSpec: function (type) { return PARTS[type]; },
     isBlocked: function (levelIndex, parts) {
       return parts.map(function (p) { return isBlocked(p, LEVELS[levelIndex], parts); });
     },
