@@ -10,13 +10,16 @@ fristående och kräver ingen server.
 
 ## Spelet
 
-Fem banor. Varje bana ger dig en bricka med delar:
+Åtta banor. Varje bana ger dig en bricka med delar:
 
 | Del | Vad den gör |
 | --- | --- |
 | Planka | 214 px lång ramp, låg friktion |
 | Kort planka | 118 px — räcker till ett kort hopp |
 | Studsmatta | Gummi, studstal 0,98: ger tillbaka nästan all fart |
+| Tratt | Två armar i en V-form: fångar brett, släpper smalt |
+| Fläkt | Blåser längs sin egen uppåtriktning, 190 px långt. Kraften avtar med avståndet och verkar bara i en smal ström — utanför den märks den inte alls |
+| Vippa | Planka på en tapp. Den söker sitt eget läge så fort kulan lägger sig på ena änden |
 
 Dra en del från hyllan ut på brädan, tryck på den för att markera den, dra i den
 orange ratten för att vrida (snäpper till 5°) och kryssen för att ta bort den.
@@ -60,7 +63,12 @@ för hämtad från ett CDN — spelet ska fungera från en dubbelklickad fil och
 sammanhang där externa skript inte går att nå. Enda externa referensen som är
 kvar är typsnitten från Google Fonts, och de har riktiga reservtypsnitt.
 
-Två detaljer i fysiken är värda att känna till innan man ändrar:
+En del kan bestå av flera kroppar (tratten har två armar) och behöver inte
+sitta fast (vippan hänger på en tapp). Byggläget kör alltid allt som fast
+geometri så att lägeskontrollen blir meningsfull; först när man trycker
+**Spela** byggs världen om med det som ska röra sig löst.
+
+Tre detaljer i fysiken är värda att känna till innan man ändrar:
 
 - **Fast tidssteg med två delsteg per bildruta, plus en fartspärr på kulan.**
   Utan spärren kan en snabb kula hoppa rakt igenom en 16 px tunn planka mellan
@@ -68,6 +76,10 @@ Två detaljer i fysiken är värda att känna till innan man ändrar:
 - **Kulan når ungefär lika långt i sidled som den faller.** Ungefär 0,7 px
   sidled per px fall, efter friktion och fartspärr. En bana där kulan ska ta sig
   400 px åt höger utan att falla lika mycket är inte svår — den är omöjlig.
+  Fläkten är undantaget: den bär kulan uppåt och i sidled utan att den tappar
+  höjd, och är därför det enda som klarar ett långt språng åt sidan.
+- **En ramp under ~8° håller inte kulan i rullning.** Friktionen tar den och
+  försöket slutar med "Kulan stannade". Lutar man en hylla ska den luta ordentligt.
 
 ### Banformatet
 

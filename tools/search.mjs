@@ -82,14 +82,10 @@ const found = await page.evaluate(
         const cands = [];
         for (const node of beam) {
           for (let n = 0; n < per; n++) {
-            const parts = node.parts.concat([
-              {
-                type: types[stage],
-                x: Math.round(pick(70, 890)),
-                y: Math.round(pick(150, 600)),
-                a: Math.round(pick(-70, 70) / 5) * 5
-              }
-            ]);
+            const px = Math.round(pick(70, 890));
+            const py = Math.round(pick(150, 600));
+            const pa = Math.round(pick(-70, 70) / 5) * 5;
+            const parts = node.parts.concat([{ type: types[stage], x: px, y: py, a: pa }]);
             if (K.isBlocked(i, parts).some(Boolean)) continue;
             const r = K.simulate(i, parts, 1500);
             if (r.result === "win") wins.push({ parts, steps: r.steps });
@@ -113,13 +109,53 @@ const found = await page.evaluate(
 
       // en lösning duger bara om den fortfarande vinner som heltal
       const solid = wins.filter((w) => K.simulate(i, w.parts, 1500).result === "win");
+
+      /**
+       * Stjärnor hör hemma på den sträcka spelaren själv formar: efter att
+       * kulan lämnat sin fallinje, före rännan som rullar den hem. En stjärna
+       * på rännan tar varje lösning gratis, och en som ligger inom en delbredd
+       * göms bakom plywooden.
+       */
+      const proposeStars = (parts, count) => {
+        const keep = lv.stars;
+        lv.stars = [];
+        const run = K.simulate(i, parts, 1500);
+        lv.stars = keep;
+        const away = (q, pt, d) => Math.hypot(q.x - pt.x, q.y - pt.y) > d;
+        const segToChute = (q) => {
+          const dx = tail.x - gate.x, dy = tail.y - gate.y;
+          const u = Math.max(0, Math.min(1, ((q.x - gate.x) * dx + (q.y - gate.y) * dy) / (dx * dx + dy * dy)));
+          return Math.hypot(q.x - (gate.x + dx * u), q.y - (gate.y + dy * u));
+        };
+        let from = run.path.findIndex((q) => Math.abs(q.x - lv.spawn.x) > 30);
+        if (from < 0) from = 0;
+        let to = run.path.findIndex((q, k) => k > from && segToChute(q) < 34);
+        if (to < 0) to = run.path.length;
+        const span = run.path
+          .slice(from, to)
+          .filter((q) =>
+            parts.every((p) => away(q, p, 55)) &&
+            away(q, lv.spawn, 120) && away(q, lv.cup, 130) &&
+            q.y > 140 && q.y < 590 && q.x > 60 && q.x < 900);
+        if (span.length < 6) return null;
+        const at = (f) => ({ x: Math.round(span[Math.floor(span.length * f)].x),
+                             y: Math.round(span[Math.floor(span.length * f)].y) });
+        const stars = count === 1 ? [at(0.5)] : [at(0.25), at(0.7)];
+        if (stars.length === 2 && Math.hypot(stars[0].x - stars[1].x, stars[0].y - stars[1].y) < 90) return null;
+        lv.stars = stars;
+        const ok = K.simulate(i, parts, 1500).result === "win";
+        lv.stars = keep;
+        return ok ? stars : null;
+      };
       const empty = K.simulate(i, [], 900).result;
+      const best = solid.length ? solid[Math.floor(solid.length / 2)].parts : null;
       out.push({
         level: i,
         name: lv.name,
         wins: solid.length,
         emptyTray: empty,
-        best: solid.length ? solid[Math.floor(solid.length / 2)].parts : null,
+        best: best,
+        stars: best && !lv.stars.length ? (proposeStars(best, 2) || proposeStars(best, 1)) : lv.stars,
         all: solid.slice(0, 12).map((w) => w.parts)
       });
     }
@@ -131,7 +167,8 @@ const found = await page.evaluate(
 for (const r of found) {
   const flag = r.emptyTray === "win" ? "  ⚠ klaras med tom bricka" : "";
   console.log(`Bana ${r.level + 1} ${r.name}: ${r.wins} lösningar${flag}`);
-  if (r.best) console.log("  " + JSON.stringify(r.best));
+  if (r.best) console.log("  delar:    " + JSON.stringify(r.best));
+  if (r.stars) console.log("  stjärnor: " + JSON.stringify(r.stars));
 }
 fs.writeFileSync(path.join(root, "tools", "solutions.json"), JSON.stringify(found, null, 1));
 console.log("\nSkrev tools/solutions.json");
