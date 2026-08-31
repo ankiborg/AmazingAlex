@@ -1388,7 +1388,7 @@
     } else {
       var texts = {
         "fell": ["Kulan rullade av", "Den lämnade brädan innan koppen. Flytta en del och försök igen."],
-        "stall": ["Kulan stannade", "Den blev liggande. Ge banan mer lutning."],
+        "stall": ["Kulan kom inte vidare", "Den blev stående. Något behöver ge den mer fart, eller mer lutning."],
         "cup-missing-stars": ["Stjärna kvar", "Kulan landade rätt, men alla stjärnor måste tas först."],
         "timeout": ["Tiden rann ut", "Kulan kom aldrig fram. Bygg om banan."]
       }[kind];
@@ -2357,6 +2357,7 @@
     render: render,
     simulate: simulate,
     partSpec: function (type) { return PARTS[type]; },
+    partBodiesOf: function (p) { return partBodies(p, false); },
     // Kör ett pågående försök till slut utan att vänta på bildrutorna. Fysiken
     // har fast tidssteg, så utfallet blir exakt detsamma — bara mycket
     // snabbare, vilket gör skillnad när ett prov spelar arton banor.
