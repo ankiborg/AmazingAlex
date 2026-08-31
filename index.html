@@ -272,7 +272,8 @@
     color: var(--accent-ink);
     font-size: 13px;
     font-weight: 600;
-    white-space: nowrap;
+    max-width: min(420px, 90vw);
+    text-align: left;
     box-shadow: 0 6px 16px -8px rgba(0,0,0,.55);
     animation: nudge 1.8s ease-in-out infinite;
     pointer-events: none;
@@ -685,11 +686,15 @@
   var PARTS = {
     plank:  { w: 214, h: 16, name: "Planka",      rest: 0.14, fric: 0.06 },
     short:  { w: 118, h: 16, name: "Kort planka", rest: 0.14, fric: 0.06 },
-    bounce: { w: 98,  h: 20, name: "Studsmatta",  rest: 0.98, fric: 0.02 },
-    funnel: { w: 160, h: 96, name: "Tratt",       rest: 0.08, fric: 0.05, arm: 104, spread: 34 },
-    seesaw: { w: 184, h: 14, name: "Vippa",       rest: 0.10, fric: 0.09, pivot: true },
+    bounce: { w: 98,  h: 20, name: "Studsmatta",  rest: 0.98, fric: 0.02,
+              blurb: "Studsmattan ger tillbaka nästan all fart kulan kom med." },
+    funnel: { w: 160, h: 96, name: "Tratt",       rest: 0.08, fric: 0.05, arm: 104, spread: 34,
+              blurb: "Tratten fångar brett och släpper smalt. Den går att vrida." },
+    seesaw: { w: 184, h: 14, name: "Vippa",       rest: 0.10, fric: 0.09, pivot: true,
+              blurb: "Vippan hänger på en tapp och söker sitt eget läge när kulan lägger sig på den." },
     fan:    { w: 76,  h: 48, name: "Fläkt",       rest: 0.2,  fric: 0.2,
-              reach: 190, width: 44, push: 0.0026 }
+              reach: 190, width: 44, push: 0.0026,
+              blurb: "Fläkten blåser åt det håll den pekar, ett par plankors längd framåt." }
   };
 
   // Trattens två armar, i delens eget koordinatsystem: en V som fångar en kula
@@ -1353,6 +1358,7 @@
     state.lastSpeed = 0;
     state.hatch = reduceMotion ? 0 : 1;
     if (!taught && state.parts.length) teachDone();
+    markSeen();
     Sound.release();
     syncUI();
   }
@@ -2180,22 +2186,59 @@
   var coachEl = document.getElementById("coach");
   var coachText = document.getElementById("coachText");
   var taught = false;
-  try { taught = localStorage.getItem("kulbanan.taught") === "1"; } catch (e) {}
+  var seenParts = {};
+  try {
+    taught = localStorage.getItem("kulbanan.taught") === "1";
+    (localStorage.getItem("kulbanan.seen") || "").split(",").forEach(function (k) {
+      if (k) seenParts[k] = true;
+    });
+  } catch (e) {}
+
   function teachDone() {
     taught = true;
     coachEl.hidden = true;
     try { localStorage.setItem("kulbanan.taught", "1"); } catch (e) {}
   }
-  function coach() {
-    if (taught || state.running) { coachEl.hidden = true; return; }
-    coachEl.hidden = false;
-    if (!state.parts.length) {
-      coachEl.dataset.at = "tray";
-      coachText.textContent = "Dra ut plankan på brädan";
-    } else {
-      coachEl.dataset.at = "play";
-      coachText.textContent = "Tryck på Spela";
+  // en del räknas som presenterad så fort spelaren tagit i den eller kört ett
+  // försök på banan där den delades ut
+  function markSeen() {
+    var changed = false;
+    Object.keys(level().tray).forEach(function (k) {
+      if (!seenParts[k]) { seenParts[k] = true; changed = true; }
+    });
+    if (changed) {
+      try { localStorage.setItem("kulbanan.seen", Object.keys(seenParts).join(",")); } catch (e) {}
     }
+  }
+  function newPart() {
+    var kinds = Object.keys(level().tray);
+    for (var i = 0; i < kinds.length; i++) {
+      if (!seenParts[kinds[i]] && PARTS[kinds[i]].blurb) return kinds[i];
+    }
+    return null;
+  }
+
+  function coach() {
+    if (state.running) { coachEl.hidden = true; return; }
+    var fresh = newPart();
+    if (!taught) {
+      coachEl.hidden = false;
+      if (!state.parts.length) {
+        coachEl.dataset.at = "tray";
+        coachText.textContent = "Dra ut plankan på brädan";
+      } else {
+        coachEl.dataset.at = "play";
+        coachText.textContent = "Tryck på Spela";
+      }
+      return;
+    }
+    if (fresh && !state.parts.length) {
+      coachEl.hidden = false;
+      coachEl.dataset.at = "tray";
+      coachText.textContent = PARTS[fresh].blurb;
+      return;
+    }
+    coachEl.hidden = true;
   }
 
   var helpEl = document.querySelector("details.help");
