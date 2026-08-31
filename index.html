@@ -1340,7 +1340,9 @@
   readTokens();
   if (window.matchMedia) {
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
-    if (mq.addEventListener) mq.addEventListener("change", function () { readTokens(); render(); });
+    if (mq.addEventListener) mq.addEventListener("change", function () {
+      readTokens(); bgKey = ""; render();
+    });
   }
 
   /**
@@ -1360,6 +1362,36 @@
     chromeHeight = appH - stageH;
     var avail = window.innerHeight - chromeHeight - 14;
     stage.style.maxWidth = Math.min(1000, Math.max(300, avail * 1.5)) + "px";
+  }
+
+  /**
+   * Pegboardens sexhundra hål, den fasta plywooden och koppen ser likadana ut
+   * varje bildruta. De ritas en gång till en egen canvas som sedan kopieras in,
+   * i stället för att ritas om sextio gånger i sekunden. På en telefon är det
+   * skillnaden mellan mjukt och hackigt.
+   */
+  var bgCanvas = document.createElement("canvas");
+  var bgCtx = bgCanvas.getContext("2d");
+  var bgKey = "";
+
+  function paintStatic() {
+    var lv = level();
+    var key = [state.level, canvas.width, C.board, C.ply].join("|");
+    if (key === bgKey && bgCanvas.width === canvas.width) return;
+    bgKey = key;
+    bgCanvas.width = canvas.width;
+    bgCanvas.height = canvas.height;
+    var k = canvas.width / W;
+    var real = ctx;
+    ctx = bgCtx;                       // rithjälpmedlen ritar dit ctx pekar
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawBoard();
+    lv.fixed.forEach(function (f) {
+      drawPlank(f.x, f.y, f.w, f.h, (f.a || 0) * Math.PI / 180, "fixed", false);
+    });
+    drawCup(lv.cup);
+    ctx = real;
   }
 
   function fitCanvas() {
@@ -1702,14 +1734,11 @@
       ctx.translate((Math.random() - .5) * state.shake, (Math.random() - .5) * state.shake);
     }
     ctx.clearRect(0, 0, W, H);
-    drawBoard();
+    paintStatic();
+    ctx.drawImage(bgCanvas, 0, 0, W, H);
     var lv = level();
     if (state.ghost.length && !state.running) drawDots(state.ghost, .22);
     drawDispenser(lv.spawn);
-    lv.fixed.forEach(function (f) {
-      drawPlank(f.x, f.y, f.w, f.h, (f.a || 0) * Math.PI / 180, "fixed", false);
-    });
-    drawCup(lv.cup);
     state.stars.forEach(drawStar);
     var blocked = state.blocked;
     state.parts.forEach(function (p) {
@@ -2175,6 +2204,7 @@
   // Dev hook: lets a headless run check that every level is actually solvable.
   window.__kulbanan = {
     levels: LEVELS,
+    render: render,
     simulate: simulate,
     partSpec: function (type) { return PARTS[type]; },
     isBlocked: function (levelIndex, parts) {
