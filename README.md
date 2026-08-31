@@ -10,7 +10,7 @@ fristående och kräver ingen server.
 
 ## Spelet
 
-Arton banor i fyra kapitel:
+Tjugotvå banor i fem kapitel:
 
 | Kapitel | Banor | Vad de handlar om |
 | --- | --- | --- |
@@ -18,6 +18,7 @@ Arton banor i fyra kapitel:
 | Verktygen | 5–8 | Studsmatta, tratt, fläkt och vippa, ett i taget |
 | Mästarbanorna | 9–14 | Flera verktyg samtidigt |
 | Andra hållet | 15–18 | Lådan till höger, koppen till vänster — allt spegelvänt |
+| Sista skiftet | 19–22 | Två av samma del, och verktygen mot varandra |
 
 Varje bana ger dig en bricka med delar:
 
@@ -168,7 +169,7 @@ npm test          # spelar upp varje bana genom gränssnittet
 
 Testet kräver att
 
-- alla arton banor slutar med "Klart!",
+- alla tjugotvå banor slutar med "Klart!",
 - ingen bricka innehåller en del som lösningen inte använder,
 - ingen bana går att klara med tom bricka,
 - ingen sparad lösning lägger en del i vägen för fast geometri,

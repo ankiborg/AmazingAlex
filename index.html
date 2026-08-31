@@ -721,7 +721,8 @@
     { name: "Grunderna", from: 0 },
     { name: "Verktygen", from: 4 },
     { name: "Mästarbanorna", from: 8 },
-    { name: "Andra hållet", from: 14 }
+    { name: "Andra hållet", from: 14 },
+    { name: "Sista skiftet", from: 18 }
   ];
   function chapterOf(i) {
     for (var c = CHAPTERS.length - 1; c >= 0; c--) if (i >= CHAPTERS[c].from) return CHAPTERS[c];
@@ -1023,6 +1024,71 @@
       solution: [
         { type: "bounce", x: 528, y: 169, a: 60 },
         { type: "seesaw", x: 435, y: 208, a: -10 }
+      ]
+    },
+    {
+      name: "Två vippor",
+      hint: "Två tappar, två lägen som ställer in sig själva.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 300, y: 250, w: 20, h: 150, a: 0 },
+        { x: 600, y: 430, w: 520, h: 16, a: 8 }
+      ],
+      cup: { x: 858, y: 576 },
+      stars: [ { x: 272, y: 313 }, { x: 393, y: 363 } ],
+      tray: { seesaw: 2 },
+      solution: [
+        { type: "seesaw", x: 181, y: 212, a: 55 },
+        { type: "seesaw", x: 315, y: 375, a: 5 }
+      ]
+    },
+    {
+      name: "Blåst och tratt",
+      hint: "Fånga först, blås sedan.",
+      spawn: { x: 820, y: 108 },
+      fixed: [
+        { x: 600, y: 280, w: 20, h: 180, a: 0 },
+        { x: 400, y: 440, w: 460, h: 16, a: -8 }
+      ],
+      cup: { x: 172, y: 582, flip: true },
+      stars: [ { x: 736, y: 251 }, { x: 660, y: 332 } ],
+      tray: { funnel: 1, fan: 1 },
+      solution: [
+        { type: "funnel", x: 857, y: 216, a: -60 },
+        { type: "fan", x: 782, y: 378, a: -35 }
+      ]
+    },
+    {
+      name: "Dubbelstuds",
+      hint: "En studs räcker inte hela vägen upp.",
+      spawn: { x: 150, y: 108 },
+      fixed: [
+        { x: 250, y: 520, w: 340, h: 16, a: 0 },
+        { x: 600, y: 460, w: 420, h: 16, a: 10 }
+      ],
+      cup: { x: 807, y: 606 },
+      stars: [ { x: 257, y: 208 }, { x: 366, y: 339 } ],
+      tray: { bounce: 2 },
+      solution: [
+        { type: "bounce", x: 179, y: 152, a: 15 },
+        { type: "bounce", x: 266, y: 298, a: 25 }
+      ]
+    },
+    {
+      name: "Genom verkstaden",
+      hint: "Muren delar brädan. Luften bryr sig inte.",
+      spawn: { x: 140, y: 108 },
+      fixed: [
+        { x: 420, y: 300, w: 20, h: 200, a: 0 },
+        { x: 700, y: 300, w: 200, h: 16, a: 0 },
+        { x: 640, y: 470, w: 400, h: 16, a: 8 }
+      ],
+      cup: { x: 838, y: 608 },
+      stars: [ { x: 259, y: 203 }, { x: 379, y: 184 } ],
+      tray: { plank: 1, fan: 1 },
+      solution: [
+        { type: "plank", x: 179, y: 219, a: 5 },
+        { type: "fan", x: 303, y: 286, a: 25 }
       ]
     }
   ];
