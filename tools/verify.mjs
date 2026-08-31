@@ -190,11 +190,66 @@ for (const [label, opts] of [
   await ctx.close();
 }
 
+// Kantfall: saker en spelare gör som inte står i instruktionerna.
+{
+  const ctx = await browser.newContext({ viewport: { width: 1120, height: 940 } });
+  const edge = await ctx.newPage();
+  await edge.bringToFront();
+  edge.on("pageerror", (e) => errors.push("kantfall: " + e.message));
+
+  // localStorage som kastar ska inte hindra spelet från att starta
+  await edge.addInitScript(() => {
+    const boom = () => { throw new Error("lagring nekad"); };
+    try {
+      Object.defineProperty(window, "localStorage", {
+        configurable: true,
+        get: () => ({ getItem: boom, setItem: boom, removeItem: boom })
+      });
+    } catch (e) { /* vissa byggen tillåter inte det här — då testas resten ändå */ }
+  });
+  await edge.goto(page_url);
+  await edge.waitForFunction(() => !!window.__kulbanan, null, { timeout: 15000 });
+  const started = await edge.$eval("#play", (el) => !el.disabled);
+  console.log(started ? "✓ Startar även när lagringen nekas" : "✗ Startar inte när lagringen nekas");
+  if (!started) failed++;
+
+  // byta bana mitt i ett försök
+  await edge.evaluate(() => window.__kulbanan.applySolution());
+  await edge.click("#play");
+  await edge.waitForTimeout(250);
+  await edge.click(".lvl >> nth=0");
+  await edge.waitForTimeout(150);
+  const stopped = await edge.evaluate(() => document.getElementById("play").textContent === "Spela");
+  console.log(stopped ? "✓ Byta bana mitt i ett försök" : "✗ Försöket rullar vidare efter banbyte");
+  if (!stopped) failed++;
+
+  // en del ovanpå lådan ska vägras
+  const jam = await edge.evaluate(() => {
+    const lv = window.__kulbanan.levels[0];
+    return window.__kulbanan.isBlocked(0, [{ type: "plank", x: lv.spawn.x, y: lv.spawn.y, a: 0 }])[0];
+  });
+  console.log(jam ? "✓ Del ovanpå kulans födelseplats vägras" : "✗ Del får sitta där kulan föds");
+  if (!jam) failed++;
+
+  // fönstret ändrar storlek mitt i ett försök
+  await edge.evaluate(() => window.__kulbanan.applySolution());
+  await edge.click("#play");
+  await edge.waitForTimeout(200);
+  await edge.setViewportSize({ width: 780, height: 700 });
+  await edge.waitForTimeout(200);
+  await edge.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
+  const survived = await edge.textContent("#veilTitle");
+  console.log(survived === "Klart!" ? "✓ Storleksändring mitt i ett försök" : `✗ Storleksändring bröt försöket: "${survived}"`);
+  if (survived !== "Klart!") failed++;
+
+  await ctx.close();
+}
+
 if (errors.length) {
   console.error("Fel i sidan:\n  " + errors.join("\n  "));
   failed += errors.length;
 }
 
 await browser.close();
-console.log(failed ? `\n${failed} fel` : `\nAllt grönt: ${levels.length} banor och ${hands} handbyggen`);
+console.log(failed ? `\n${failed} fel` : `\nAllt grönt: ${levels.length} banor, ${hands} handbyggen, tangentbord och kantfall`);
 process.exit(failed ? 1 : 0);

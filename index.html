@@ -852,19 +852,19 @@
     {
       name: "Verkstaden",
       hint: "En av varje. Använd dem i rätt ordning.",
-      spawn: { x: 140, y: 108 },
+      spawn: { x: 200, y: 108 },
       fixed: [
         { x: 300, y: 470, w: 300, h: 16, a: 0 },
-        { x: 560, y: 330, w: 24, h: 120, a: 0 },
-        { x: 720, y: 440, w: 300, h: 16, a: 8 }
+        { x: 480, y: 250, w: 24, h: 150, a: 0 },
+        { x: 660, y: 430, w: 420, h: 16, a: 8 }
       ],
-      cup: { x: 869, y: 571 },
-      stars: [ { x: 517, y: 157 }, { x: 581, y: 256 } ],
+      cup: { x: 868, y: 569 },
+      stars: [ { x: 388, y: 331 } ],
       tray: { bounce: 1, seesaw: 1, plank: 1 },
       solution: [
-        { type: "bounce", x: 170, y: 252, a: 40 },
-        { type: "seesaw", x: 86, y: 184, a: -55 },
-        { type: "plank", x: 417, y: 154, a: 15 }
+        { type: "bounce", x: 174, y: 182, a: 10 },
+        { type: "seesaw", x: 280, y: 282, a: 35 },
+        { type: "plank", x: 321, y: 348, a: 10 }
       ]
     },
     {
@@ -942,6 +942,10 @@
   function blockers(level, parts, self) {
     var list = level.fixed.map(fixedBody).concat(cupBodies(level.cup));
     list.push(M.Bodies.rectangle(level.spawn.x, level.spawn.y - 46, 84, 70, { isStatic: true }));
+    // och kulans födelseplats: en del som omsluter den punkten föder kulan
+    // inuti sig. En del strax under lådan är däremot helt i sin ordning — den
+    // är ofta precis vad banan går ut på — så spärren är en cirkel, inte en låda.
+    list.push(M.Bodies.circle(level.spawn.x, level.spawn.y, 18, { isStatic: true }));
     parts.forEach(function (p) {
       if (p !== self) list = list.concat(partBodies(p, false));
     });
@@ -1158,6 +1162,7 @@
   }
 
   function loadLevel(i, keepGhost) {
+    Sound.roll(0);
     state.level = i;
     state.parts = [];
     state.tray = Object.assign({}, level().tray);
