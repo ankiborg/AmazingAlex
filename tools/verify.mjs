@@ -77,23 +77,30 @@ for (let i = 0; i < levels.length; i++) {
   }
 }
 
-// den sparade lösningen ska klara banan hela vägen genom gränssnittet
+// Den sparade lösningen ska klara banan hela vägen genom gränssnittet. Alla
+// banor låses upp en gång i stället för att sidan laddas om per bana — arton
+// omladdningar tog längre tid än alla arton fysikkörningar tillsammans.
+await page.evaluate((n) => {
+  try {
+    localStorage.setItem("kulbanan.progress", String(n));
+    localStorage.setItem("kulbanan.taught", "1");
+  } catch (e) {
+    /* privat läge — då låser väljaren, och testet nedan säger till */
+  }
+}, levels.length - 1);
+await page.reload();
+await page.waitForFunction(() => !!window.__kulbanan, null, { timeout: 15000 });
+
 for (let i = 0; i < levels.length; i++) {
-  await page.evaluate((n) => {
-    try {
-      localStorage.setItem("kulbanan.progress", String(n));
-    } catch (e) {
-      /* privat läge — nivåväljaren låser då, så vi laddar om ändå */
-    }
-  }, i);
-  await page.reload();
-  await page.waitForFunction(() => !!window.__kulbanan, null, { timeout: 15000 });
   await page.click(`.lvl >> nth=${i}`);
   await page.evaluate(() => window.__kulbanan.applySolution());
   await page.click("#play");
+  // spola fram i stället för att vänta på bildrutorna — samma fysik, samma
+  // utfall, men arton banor i realtid tar minuter
+  await page.evaluate(() => window.__kulbanan.runToEnd());
   await page.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
-  const title = await page.textContent("#veilTitle");
-  if (title === "Klart!") {
+  const title = await page.getAttribute(".veil", "data-result");
+  if (title === "win") {
     console.log(`✓ Bana ${i + 1} ${levels[i]}`);
   } else {
     console.error(`✗ Bana ${i + 1} ${levels[i]}: "${title}"`);
@@ -145,8 +152,8 @@ for (const [label, opts] of [
 
   await hand.click("#play");
   await hand.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
-  const title = await hand.textContent("#veilTitle");
-  if (title === "Klart!") {
+  const title = await hand.getAttribute(".veil", "data-result");
+  if (title === "win") {
     console.log(`✓ Bygg för hand (${label})`);
     hands++;
   } else {
@@ -180,8 +187,8 @@ for (const [label, opts] of [
   await press(".", 6);
   await kb.keyboard.press("Enter");
   await kb.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
-  const title = await kb.textContent("#veilTitle");
-  if (title === "Klart!") {
+  const title = await kb.getAttribute(".veil", "data-result");
+  if (title === "win") {
     console.log("✓ Bygg med tangentbord");
   } else {
     console.error(`✗ Bygg med tangentbord: "${title}"`);
@@ -238,9 +245,9 @@ for (const [label, opts] of [
   await edge.setViewportSize({ width: 780, height: 700 });
   await edge.waitForTimeout(200);
   await edge.waitForSelector('.veil[data-open="true"]', { timeout: 20000 });
-  const survived = await edge.textContent("#veilTitle");
-  console.log(survived === "Klart!" ? "✓ Storleksändring mitt i ett försök" : `✗ Storleksändring bröt försöket: "${survived}"`);
-  if (survived !== "Klart!") failed++;
+  const survived = await edge.getAttribute(".veil", "data-result");
+  console.log(survived === "win" ? "✓ Storleksändring mitt i ett försök" : `✗ Storleksändring bröt försöket: "${survived}"`);
+  if (survived !== "win") failed++;
 
   await ctx.close();
 }

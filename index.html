@@ -200,24 +200,53 @@
     touch-action: none;
     cursor: crosshair;
   }
+  /* Resultatet är ett kort längst ner, inte ett lock över hela brädan: man
+     ska få se maskinen man just byggde och var kulan tog vägen. */
   .veil {
     position: absolute; inset: 10px;
     display: none;
-    place-items: center;
+    align-items: flex-end;
+    justify-content: center;
     border-radius: 3px;
-    background: color-mix(in srgb, var(--ground) 82%, transparent);
-    backdrop-filter: blur(2px);
+    padding: 18px;
     text-align: center;
-    padding: 20px;
+    background: linear-gradient(to top,
+      color-mix(in srgb, var(--ground) 62%, transparent) 0%,
+      color-mix(in srgb, var(--ground) 14%, transparent) 30%,
+      transparent 52%);
   }
-  .veil[data-open="true"] { display: grid; }
+  .veil[data-open="true"] { display: flex; }
+  .veil .card {
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 22px 18px;
+    box-shadow: var(--shadow);
+    max-width: 400px;
+    animation: rise .22s ease-out;
+  }
+  @keyframes rise {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .veil .card { animation: none; }
+  }
   .veil h2 {
     font-family: "Bricolage Grotesque", sans-serif;
     font-weight: 800;
-    font-size: clamp(24px, 5vw, 34px);
-    margin: 0 0 6px;
+    font-size: clamp(21px, 4vw, 28px);
+    margin: 0 0 4px;
   }
-  .veil p { margin: 0 0 16px; color: var(--ink-soft); max-width: 34ch; }
+  .veil p { margin: 0 0 14px; color: var(--ink-soft); max-width: 34ch; font-size: 14px; }
+  .veil .score {
+    display: flex; justify-content: center; gap: 4px;
+    margin: 0 0 12px;
+    font-size: 17px;
+    color: var(--brass);
+    letter-spacing: 2px;
+  }
+  .veil .score[hidden] { display: none; }
 
   /* ---- workbench ---- */
   .bench {
@@ -423,8 +452,9 @@
     <div class="frame">
       <canvas id="board" width="960" height="640" aria-label="Spelplan"></canvas>
       <div class="veil" id="veil">
-        <div>
+        <div class="card">
           <h2 id="veilTitle">Klart!</h2>
+          <p class="score" id="veilScore" hidden></p>
           <p id="veilText"></p>
           <button class="btn go" id="veilBtn">Nästa bana</button>
         </div>
@@ -1325,6 +1355,7 @@
   function finish(kind) {
     state.running = false;
     state.ended = kind;
+    veilEl.dataset.result = kind;
     state.ghost = state.trail.slice();
     Sound.roll(0);
     if (kind === "win") Sound.win(); else Sound.fail();
@@ -1334,14 +1365,15 @@
       if (state.level >= unlocked && state.level + 1 < LEVELS.length) unlocked = state.level + 1;
       saveProgress();
       var more = state.level + 1 < LEVELS.length;
-      var taken = starsTaken();
-      veil(true, "Klart!",
-        more
-          ? (fresh ? "Kulan tog allt på vägen ner. " : "") + taken + " av " + starsTotal() + " stjärnor."
-          : (taken === starsTotal()
-              ? "Alla " + starsTotal() + " stjärnor. Hela verkstaden är din."
-              : "Sista banan klar. " + taken + " av " + starsTotal() + " stjärnor tagna."),
-        more ? "Nästa bana" : "Spela om");
+      var taken = starsTaken(), total = starsTotal();
+      var got = level().stars.length;
+      veil(true,
+        taken === total ? "Hela verkstaden är din" : "Klart!",
+        taken === total
+          ? "Alla " + total + " stjärnor hämtade."
+          : taken + " av " + total + " stjärnor" + (more ? "" : " — och sista banan klar"),
+        more ? "Nästa bana" : "Spela om",
+        new Array(got + 1).join("★ ").trim());
     } else {
       var texts = {
         "fell": ["Kulan rullade av", "Den lämnade brädan innan koppen. Flytta en del och försök igen."],
@@ -1986,14 +2018,17 @@
   var veilTitle = document.getElementById("veilTitle");
   var veilText = document.getElementById("veilText");
   var veilBtn = document.getElementById("veilBtn");
+  var veilScore = document.getElementById("veilScore");
 
   var statusEl = document.getElementById("status");
   function say(msg) { if (statusEl) statusEl.textContent = msg; }
 
-  function veil(open, title, text, btn) {
+  function veil(open, title, text, btn, score) {
     veilEl.setAttribute("data-open", open ? "true" : "false");
     if (open) {
       veilTitle.textContent = title;
+      veilScore.hidden = !score;
+      if (score) veilScore.textContent = score;
       veilText.textContent = text;
       veilBtn.textContent = btn;
       say(title + " " + text);
@@ -2274,6 +2309,14 @@
     render: render,
     simulate: simulate,
     partSpec: function (type) { return PARTS[type]; },
+    // Kör ett pågående försök till slut utan att vänta på bildrutorna. Fysiken
+    // har fast tidssteg, så utfallet blir exakt detsamma — bara mycket
+    // snabbare, vilket gör skillnad när ett prov spelar arton banor.
+    runToEnd: function (maxFrames) {
+      var n = 0, cap = maxFrames || 2000;
+      while (state.running && n++ < cap) tick();
+      return state.ended;
+    },
     isBlocked: function (levelIndex, parts) {
       return parts.map(function (p) { return isBlocked(p, LEVELS[levelIndex], parts); });
     },
