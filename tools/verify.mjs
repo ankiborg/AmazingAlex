@@ -68,6 +68,22 @@ for (let i = 0; i < levels.length; i++) {
   }
 }
 
+// En sparad lösning ska ligga innanför brädan. En del som hänger utanför
+// kanten fungerar, men den ser trasig ut och lär ut fel sak.
+for (let i = 0; i < levels.length; i++) {
+  const outside = await page.evaluate((n) => {
+    const K = window.__kulbanan;
+    return K.levels[n].solution.filter((s) =>
+      K.partBodiesOf(s).some((body) =>
+        body.vertices.some((v) => v.x < 0 || v.x > 960 || v.y < 0 || v.y > 640))
+    ).map((s) => s.type);
+  }, i);
+  if (outside.length) {
+    console.error(`✗ Bana ${i + 1} ${levels[i]}: ${outside.join(", ")} hänger utanför brädan`);
+    failed++;
+  }
+}
+
 // tom bricka får aldrig räcka
 for (let i = 0; i < levels.length; i++) {
   const r = await page.evaluate((n) => window.__kulbanan.simulate(n, [], 900).result, i);
