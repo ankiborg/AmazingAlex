@@ -10,13 +10,14 @@ fristående och kräver ingen server.
 
 ## Spelet
 
-Fjorton banor i tre kapitel:
+Arton banor i fyra kapitel:
 
 | Kapitel | Banor | Vad de handlar om |
 | --- | --- | --- |
 | Grunderna | 1–4 | Plankor: lutning, räckvidd, kedjor av hopp |
 | Verktygen | 5–8 | Studsmatta, tratt, fläkt och vippa, ett i taget |
 | Mästarbanorna | 9–14 | Flera verktyg samtidigt |
+| Andra hållet | 15–18 | Lådan till höger, koppen till vänster — allt spegelvänt |
 
 Varje bana ger dig en bricka med delar:
 
@@ -124,7 +125,12 @@ Tre detaljer i fysiken är värda att känna till innan man ändrar:
 
 Sista fältet i `fixed` är banans **ränna**: den sluttande plankan som fångar upp
 kulan och rullar den in i koppen. Rännans övre ände är i praktiken banans
-grind — pusslet är att få kulan dit.
+grind — pusslet är att få kulan dit. Verktygen letar upp den änden genom att
+ta den av rännans två ändar som ligger högst, så en spegelvänd bana fungerar
+utan att något behöver sägas till dem.
+
+`cup.flip` vänder koppen så att planket hamnar på vänster sida, för banorna
+där kulan kommer från höger.
 
 ## Banorna är verifierade, inte gissade
 
@@ -143,7 +149,7 @@ npm test          # spelar upp varje bana genom gränssnittet
 
 Testet kräver att
 
-- alla fjorton banor slutar med "Klart!",
+- alla arton banor slutar med "Klart!",
 - ingen bricka innehåller en del som lösningen inte använder,
 - ingen bana går att klara med tom bricka,
 - ingen sparad lösning lägger en del i vägen för fast geometri,
