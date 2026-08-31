@@ -692,7 +692,7 @@
       ],
       cup: { x: 844, y: 569 },
       stars: [ { x: 240, y: 301 } ],
-      tray: { bounce: 1, plank: 1 },
+      tray: { bounce: 1 },
       solution: [
         { type: "bounce", x: 176, y: 299, a: 20 }
       ]
@@ -810,7 +810,7 @@
       ],
       cup: { x: 849, y: 561 },
       stars: [ { x: 417, y: 182 }, { x: 508, y: 294 } ],
-      tray: { fan: 2, short: 1 },
+      tray: { fan: 2 },
       solution: [
         { type: "fan", x: 116, y: 208, a: 30 },
         { type: "fan", x: 193, y: 159, a: 70 }
@@ -818,17 +818,18 @@
     },
     {
       name: "Tillbaka upp",
-      hint: "Hyllan lutar åt fel håll.",
+      hint: "Hyllan lutar åt fel håll, och rännan börjar långt bort.",
       spawn: { x: 470, y: 100 },
       fixed: [
         { x: 430, y: 250, w: 240, h: 16, a: -10 },
-        { x: 660, y: 450, w: 340, h: 16, a: 8 }
+        { x: 740, y: 470, w: 260, h: 16, a: 8 }
       ],
-      cup: { x: 828, y: 584 },
-      stars: [ { x: 550, y: 207 } ],
-      tray: { seesaw: 1, bounce: 1, plank: 1 },
+      cup: { x: 869, y: 598 },
+      stars: [ { x: 562, y: 218 } ],
+      tray: { seesaw: 1, bounce: 1 },
       solution: [
-        { type: "seesaw", x: 422, y: 160, a: -15 }
+        { type: "seesaw", x: 452, y: 201, a: 5 },
+        { type: "bounce", x: 552, y: 376, a: 60 }
       ]
     },
     {
@@ -842,7 +843,7 @@
       ],
       cup: { x: 849, y: 601 },
       stars: [ { x: 470, y: 196 }, { x: 555, y: 288 } ],
-      tray: { funnel: 1, fan: 1, short: 1 },
+      tray: { funnel: 1, fan: 1 },
       solution: [
         { type: "funnel", x: 136, y: 283, a: -45 },
         { type: "fan", x: 174, y: 190, a: 25 }

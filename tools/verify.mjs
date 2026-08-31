@@ -48,6 +48,26 @@ for (let i = 0; i < levels.length; i++) {
   }
 }
 
+// Ingen bana får ha utfyllnad i brickan: det som ligger där ska lösningen
+// använda. En del man aldrig behöver är en gåta utan svar.
+for (let i = 0; i < levels.length; i++) {
+  const fill = await page.evaluate((n) => {
+    const lv = window.__kulbanan.levels[n];
+    const used = {};
+    lv.solution.forEach((p) => { used[p.type] = (used[p.type] || 0) + 1; });
+    const extra = Object.keys(lv.tray).filter((k) => (used[k] || 0) < lv.tray[k]);
+    return { extra, missing: Object.keys(used).filter((k) => (lv.tray[k] || 0) < used[k]) };
+  }, i);
+  if (fill.extra.length) {
+    console.error(`✗ Bana ${i + 1} ${levels[i]}: brickan har ${fill.extra.join(", ")} som lösningen inte använder`);
+    failed++;
+  }
+  if (fill.missing.length) {
+    console.error(`✗ Bana ${i + 1} ${levels[i]}: lösningen använder ${fill.missing.join(", ")} som inte finns i brickan`);
+    failed++;
+  }
+}
+
 // tom bricka får aldrig räcka
 for (let i = 0; i < levels.length; i++) {
   const r = await page.evaluate((n) => window.__kulbanan.simulate(n, [], 900).result, i);
