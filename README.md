@@ -233,13 +233,51 @@ en plats i brickan. Banor byggs därför inte på att tratten ska vara *tvingand
    node tools/search.mjs 5 --budget 40000
    ```
 
-   Den skriver träffarna till `tools/solutions.json` och godtar bara
-   placeringar spelet självt tillåter.
-3. Lägg stjärnorna på den funna banan. Två regler gör skillnaden mellan en
-   stjärna som betyder något och en som är gratis: den ska ligga **efter** att
-   kulan lämnat sin fallinje och **före** rännan, och minst ~50 px från
-   lösningens egna delar — annars göms den bakom en planka.
-4. Sätt in lösningen som `solution` och kör `npm test`.
+   Den skriver träffarna till `tools/solutions.json`, godtar bara placeringar
+   spelet självt tillåter, och föreslår stjärnlägen som redan är verifierade.
+3. Sätt in lösningen som `solution`, stjärnorna som `stars`, och sätt `tray`
+   till exakt det lösningen använder. Kör `npm test`.
 
 `window.__kulbanan.applySolution()` bygger den sparade lösningen åt dig i
-gränssnittet — bekvämt vid felsökning, och det är så testet spelar banorna.
+gränssnittet — bekvämt vid felsökning, och det är så provet spelar banorna.
+
+### Vad jag lärde mig om att rita banor
+
+Allt nedan kostade minst en misslyckad bandesign att komma på. Läser man det
+först slipper man den.
+
+**Kulan når ungefär 0,7 px i sidled per px den faller.** Det är den enskilt
+viktigaste siffran. Ett gap på 150 px i sidled kräver drygt 200 px fallhöjd,
+annars är banan inte svår utan omöjlig. Fläkten är enda undantaget: den bär
+kulan i sidled utan att den tappar höjd.
+
+**En ramp under ~8° håller inte kulan rullande.** Fyra grader ser ut som en
+lutning på skärmen men friktionen äter upp den, och försöket slutar med "Kulan
+kom inte vidare". Lutar en hylla ska den luta ordentligt.
+
+**Rännans mynning får inte ligga inuti något.** Bana 13 hade sin gömd i en mur
+och gick bara att klara på ett enda sätt, för kulan var tvungen att träffa
+murens fot exakt. Sökningen hittade noll lösningar när det första svaret togs
+bort, vilket är hur felet upptäcktes.
+
+**Sikta på hur många lösningar sökningen hittar, inte bara på att den hittar
+någon.** Under fem träffar betyder oftast att banan bara har ett pixelperfekt
+svar. Bota det genom att förlänga rännan — det ger en större måltavla utan att
+göra vägen dit enklare.
+
+**Kolla vad kulan gör utan några delar alls.** `tools/audit.mjs` kör varje bana
+med tom bricka. Slutar den med `win` är banan inget pussel.
+
+**Ett sikthjälpmedel kan aldrig bli tvingande** i en deterministisk simulering.
+Tratten hjälper en människa att träffa en smal springa, men en tillräckligt
+exakt plankvinkel gör samma sak, och sökningen hittar den vinkeln. Bygg banan
+så att tratten är det självklara valet, inte det enda — allt annat är att
+bygga på ett antagande som inte håller.
+
+**Dynamiska delar är svagare än de ser ut.** Dominobrickan kastades efter tre
+bandesigner: en kula som landar mitt på dess topp balanserar i stället för att
+välta den, och en bricka som faller flyttar kulan sextio pixlar. Vippan gör
+samma jobb pålitligt, för den hänger på en tapp och kan inte falla fel.
+
+**Avrunda lösningen innan du verifierar den.** Det är heltal som hamnar i
+filen, och en halv pixel har ändrat utfallet på en bana här.
