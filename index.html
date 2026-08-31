@@ -2122,6 +2122,7 @@
 
   function veil(open, title, text, btn, score) {
     veilEl.setAttribute("data-open", open ? "true" : "false");
+    if (!open) veilEl.removeAttribute("data-result");
     if (open) {
       veilTitle.textContent = title;
       veilScore.hidden = !score;
@@ -2428,7 +2429,7 @@
 
   playBtn.addEventListener("click", startRun);
   resetBtn.addEventListener("click", function () { resetRun(); render(); });
-  window.addEventListener("resize", fitCanvas);
+  window.addEventListener("resize", function () { fitCanvas(); syncUI(); });
   if (helpEl) helpEl.addEventListener("toggle", function () { if (!helpEl.open) fitCanvas(); });
 
   buildLevels();
@@ -2446,7 +2447,7 @@
     partBodiesOf: function (p) { return partBodies(p, false); },
     // Kör ett pågående försök till slut utan att vänta på bildrutorna. Fysiken
     // har fast tidssteg, så utfallet blir exakt detsamma — bara mycket
-    // snabbare, vilket gör skillnad när ett prov spelar arton banor.
+    // snabbare, vilket gör skillnad när ett prov spelar tjugotvå banor.
     runToEnd: function (maxFrames) {
       var n = 0, cap = maxFrames || 2000;
       while (state.running && n++ < cap) tick();
@@ -2456,8 +2457,12 @@
       return parts.map(function (p) { return isBlocked(p, LEVELS[levelIndex], parts); });
     },
     applySolution: function () {
+      // börjar från ett tomt bygge, så att två anrop i rad inte drar hyllan
+      // till minus
+      state.tray = Object.assign({}, level().tray);
       state.parts = level().solution.map(function (p) { return { type: p.type, x: p.x, y: p.y, a: p.a }; });
       state.parts.forEach(function (p) { state.tray[p.type]--; });
+      state.selected = null;
       rebuildEngine(); syncUI(); render();
     }
   };
