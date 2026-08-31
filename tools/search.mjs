@@ -53,16 +53,16 @@ const found = await page.evaluate(
         for (let n = 0; n < lv.tray[k]; n++) types.push(k);
       });
 
+      // Rännans grind är dess *övre* ände, oavsett åt vilket håll banan lutar:
+      // en bana där kulan går åt vänster har rännan spegelvänd.
       const chute = lv.fixed[lv.fixed.length - 1];
       const rad = (chute.a * Math.PI) / 180;
-      const gate = {
-        x: chute.x - (chute.w / 2) * Math.cos(rad),
-        y: chute.y - (chute.w / 2) * Math.sin(rad)
-      };
-      const tail = {
-        x: chute.x + (chute.w / 2) * Math.cos(rad),
-        y: chute.y + (chute.w / 2) * Math.sin(rad)
-      };
+      const ends = [-1, 1].map((s) => ({
+        x: chute.x + s * (chute.w / 2) * Math.cos(rad),
+        y: chute.y + s * (chute.w / 2) * Math.sin(rad)
+      }));
+      const gate = ends[0].y <= ends[1].y ? ends[0] : ends[1];
+      const tail = gate === ends[0] ? ends[1] : ends[0];
       const landing = {
         x: gate.x + (tail.x - gate.x) * 0.4,
         y: gate.y + (tail.y - gate.y) * 0.4 - 24
