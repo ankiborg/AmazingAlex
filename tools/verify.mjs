@@ -246,6 +246,33 @@ for (const [label, opts] of [
   console.log(stopped ? "✓ Byta bana mitt i ett försök" : "✗ Försöket rullar vidare efter banbyte");
   if (!stopped) failed++;
 
+  // en del som dras in i ett blockerat läge med musen ska stänga av Spela
+  await edge.evaluate(() => {
+    try { localStorage.removeItem("kulbanan.progress"); } catch (e) {}
+  });
+  await edge.reload();
+  await edge.waitForFunction(() => !!window.__kulbanan, null, { timeout: 15000 });
+  {
+    const box = await (await edge.$("#board")).boundingBox();
+    const k = box.width / 960;
+    const at = (x, y) => ({ x: box.x + x * k, y: box.y + y * k });
+    const slot = await (await edge.$(".slot")).boundingBox();
+    // rakt ner på banans fasta ränna
+    const onto = at(480, 434);
+    await edge.mouse.move(slot.x + slot.width / 2, slot.y + slot.height / 2);
+    await edge.mouse.down();
+    await edge.mouse.move(at(480, 250).x, at(480, 250).y, { steps: 8 });
+    await edge.mouse.up();
+    await edge.mouse.move(at(480, 250).x, at(480, 250).y);
+    await edge.mouse.down();
+    await edge.mouse.move(onto.x, onto.y, { steps: 10 });
+    await edge.mouse.up();
+    await edge.waitForTimeout(120);
+    const locked = await edge.$eval("#play", (el) => el.disabled);
+    console.log(locked ? "✓ Spela stängs av när en del dras i vägen" : "✗ Spela är kvar aktiv med en del i vägen");
+    if (!locked) failed++;
+  }
+
   // en del ovanpå lådan ska vägras
   const jam = await edge.evaluate(() => {
     const lv = window.__kulbanan.levels[0];

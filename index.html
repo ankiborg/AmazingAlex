@@ -1323,12 +1323,22 @@
 
   // Ångra sparar bygget som det såg ut före varje ändring: delarnas läge och
   // vad som ligger kvar i hyllan.
-  function snapshot() {
-    state.history.push({
+  function snapData() {
+    return {
       parts: state.parts.map(function (p) { return { type: p.type, x: p.x, y: p.y, a: p.a }; }),
       tray: Object.assign({}, state.tray)
-    });
+    };
+  }
+  function keep(data) {
+    state.history.push(data);
     if (state.history.length > 40) state.history.shift();
+  }
+  function snapshot() { keep(snapData()); }
+  // Att markera en del är ingen ändring. Bilden tas när draget börjar men
+  // sparas först om något faktiskt rör sig, annars fylls ångra med steg som
+  // inte gör något när man trycker på dem.
+  function keepIfPending(d) {
+    if (d && d.snap) { keep(d.snap); d.snap = null; }
   }
   function undo() {
     if (state.running || !state.history.length) return;
@@ -2001,8 +2011,7 @@
     if (state.selected) {
       var h = handlePoints(state.selected);
       if (Math.hypot(pt.x - h.rot.x, pt.y - h.rot.y) < 20) {
-        snapshot();
-        state.drag = { mode: "rot", part: state.selected, lastA: state.selected.a };
+        state.drag = { mode: "rot", part: state.selected, lastA: state.selected.a, snap: snapData() };
         return;
       }
       if (Math.hypot(pt.x - h.del.x, pt.y - h.del.y) < 20) {
@@ -2013,9 +2022,11 @@
     var hit = hitPart(pt);
     if (hit) {
       if (state.selected !== hit) Sound.lift();
-      snapshot();
       state.selected = hit;
-      state.drag = { mode: "move", part: hit, dx: hit.x - pt.x, dy: hit.y - pt.y };
+      state.drag = {
+        mode: "move", part: hit, snap: snapData(),
+        dx: hit.x - pt.x, dy: hit.y - pt.y
+      };
     } else {
       state.selected = null;
       state.drag = null;
@@ -2028,11 +2039,17 @@
     var pt = toBoard(ev), d = state.drag;
     if (d.mode === "rot") {
       var deg = Math.atan2(pt.y - d.part.y, pt.x - d.part.x) * 180 / Math.PI;
-      d.part.a = Math.round(deg / 5) * 5;
-      if (d.part.a !== d.lastA) { d.lastA = d.part.a; Sound.turn(); }
+      var snapped = Math.round(deg / 5) * 5;
+      if (snapped !== d.part.a) {
+        keepIfPending(d);
+        d.part.a = snapped;
+        Sound.turn();
+      }
     } else {
-      d.part.x = pt.x + (d.dx || 0);
-      d.part.y = pt.y + (d.dy || 0);
+      var nx = pt.x + (d.dx || 0), ny = pt.y + (d.dy || 0);
+      if (nx !== d.part.x || ny !== d.part.y) keepIfPending(d);
+      d.part.x = nx;
+      d.part.y = ny;
       clampPart(d.part);
     }
     if (d.mode !== "new") rebuildEngine();
@@ -2049,6 +2066,7 @@
       if (over) {
         d.part.x = pt.x; d.part.y = pt.y;
         clampPart(d.part);
+        keepIfPending(d);
         state.parts.push(d.part);
         state.selected = d.part;
         rebuildEngine();
@@ -2057,9 +2075,11 @@
         state.tray[d.part.type]++;
         Sound.remove();
       }
-      syncUI();
     }
     state.drag = null;
+    // Spela är avstängd så länge en del sitter i vägen — utan det här kunde en
+    // del dras in i ett blockerat läge med musen och ändå spelas.
+    syncUI();
     render();
   }
   canvas.addEventListener("pointerup", endDrag);
@@ -2132,11 +2152,11 @@
       b.addEventListener("pointerdown", function (ev) {
         if (state.running || !state.tray[kind]) return;
         ev.preventDefault();
-        snapshot();
+        var before = snapData();
         state.tray[kind]--;
         Sound.lift();
         var pt = toBoard(ev);
-        state.drag = { mode: "new", part: { type: kind, x: pt.x, y: pt.y, a: 0 } };
+        state.drag = { mode: "new", part: { type: kind, x: pt.x, y: pt.y, a: 0 }, snap: before };
         state.selected = null;
         syncUI();
         render();
