@@ -37,6 +37,10 @@ En del får inte sitta inuti fast plywood, koppen, lådan eller en annan del. En
 sådan lyser röd och **Spela** är avstängd tills den flyttats — annars hade
 spelaren kunnat bygga lägen fysiken inte kan svara vettigt på.
 
+Första gången någon öppnar spelet finns ingen som säger att delarna ska dras
+ut på brädan. En lapp säger det, och när den första kulan väl rullat är den
+borta för gott.
+
 Räknaren uppe till höger visar hur många av spelets stjärnor som är hämtade.
 Klarade banor märks med en mässingsprick i banväljaren, och eftersom det är
 *vilka* banor som är klarade som sparas — inte bara hur långt man kommit —

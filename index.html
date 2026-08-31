@@ -221,8 +221,44 @@
 
   /* ---- workbench ---- */
   .bench {
+    position: relative;
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     padding-top: 4px;
+  }
+
+  /* Första gången någon öppnar spelet finns ingen som säger att delarna ska
+     dras ut på brädan. Lappen säger det en gång och kommer aldrig tillbaka. */
+  .coach {
+    position: absolute;
+    bottom: 100%;
+    margin: 0 0 10px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,.55);
+    animation: nudge 1.8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .coach::after {
+    content: "";
+    position: absolute;
+    top: 100%; left: 22px;
+    border: 6px solid transparent;
+    border-top-color: var(--accent);
+  }
+  .coach[data-at="play"] { left: auto; right: 0; }
+  .coach[data-at="play"]::after { left: auto; right: 40px; }
+  @keyframes nudge {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .coach { animation: none; }
   }
   .slots { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 auto; }
   .slot {
@@ -399,6 +435,7 @@
   <p class="turn">Vänd telefonen så blir brädan dubbelt så stor.</p>
 
   <div class="bench">
+    <p class="coach" id="coach" hidden><span id="coachText"></span></p>
     <div class="slots" id="slots"></div>
     <button class="btn icon" id="mute" aria-pressed="false" title="Ljud av/på">
       <span id="muteGlyph" aria-hidden="true">♪</span><span class="sr">Ljud</span>
@@ -1214,6 +1251,7 @@
     state.gotCount = 0;
     state.lastSpeed = 0;
     state.hatch = reduceMotion ? 0 : 1;
+    if (!taught && state.parts.length) teachDone();
     Sound.release();
     syncUI();
   }
@@ -1956,6 +1994,7 @@
     tallyNum.textContent = String(starsTaken());
     tallyOf.textContent = "/" + starsTotal();
     pickerNum.textContent = (state.level + 1) + "/" + LEVELS.length;
+    coach();
     var jammed = state.blocked.length > 0;
     warnEl.hidden = !jammed || state.running;
     playBtn.disabled = state.running || jammed;
@@ -1996,6 +2035,32 @@
       window.removeEventListener(e, once);
     }, { once: true });
   });
+
+  /**
+   * Introduktionen har två steg och visas bara för den som aldrig byggt något:
+   * först var delarna kommer ifrån, sedan att fysiken startas med Spela.
+   * Så fort båda är gjorda är den borta för gott.
+   */
+  var coachEl = document.getElementById("coach");
+  var coachText = document.getElementById("coachText");
+  var taught = false;
+  try { taught = localStorage.getItem("kulbanan.taught") === "1"; } catch (e) {}
+  function teachDone() {
+    taught = true;
+    coachEl.hidden = true;
+    try { localStorage.setItem("kulbanan.taught", "1"); } catch (e) {}
+  }
+  function coach() {
+    if (taught || state.running) { coachEl.hidden = true; return; }
+    coachEl.hidden = false;
+    if (!state.parts.length) {
+      coachEl.dataset.at = "tray";
+      coachText.textContent = "Dra ut plankan på brädan";
+    } else {
+      coachEl.dataset.at = "play";
+      coachText.textContent = "Tryck på Spela";
+    }
+  }
 
   var helpEl = document.querySelector("details.help");
   var undoBtn = document.getElementById("undo");
