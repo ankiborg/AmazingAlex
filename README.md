@@ -25,7 +25,7 @@ Varje bana ger dig en bricka med delar:
 | Planka | 214 px lång ramp, låg friktion |
 | Kort planka | 118 px — räcker till ett kort hopp |
 | Studsmatta | Gummi, studstal 0,98: ger tillbaka nästan all fart |
-| Tratt | Två armar i en V-form: fångar brett, släpper smalt |
+| Tratt | Två armar i en V-form: fångar brett, släpper smalt — två ytor på en plats i brickan |
 | Fläkt | Blåser längs sin egen uppåtriktning, 190 px långt. Kraften avtar med avståndet och verkar bara i en smal ström — utanför den märks den inte alls |
 | Vippa | Planka på en tapp. Den söker sitt eget läge så fort kulan lägger sig på ena änden |
 
@@ -139,7 +139,8 @@ npm test          # spelar upp varje bana genom gränssnittet
 
 Testet kräver att
 
-- alla fem banor slutar med "Klart!",
+- alla fjorton banor slutar med "Klart!",
+- ingen bricka innehåller en del som lösningen inte använder,
 - ingen bana går att klara med tom bricka,
 - ingen sparad lösning lägger en del i vägen för fast geometri,
 - bana 1 går att bygga **för hand** med mus, på surfplatta och på mobil, och
@@ -151,6 +152,27 @@ Har du ingen webbläsare via Playwright, peka ut en egen med
 En fallgrop värd att känna till: handtesterna måste köra i förgrunden.
 Bakgrundsflikar får sin `requestAnimationFrame` strypt, och spelets fysik går i
 takt med den — testet hänger annars i väntan på en kula som knappt rör sig.
+
+### Mäta banorna
+
+```
+node tools/audit.mjs
+```
+
+Ställer tre frågor per bana: behövs varje del i lösningen, hur stor andel av
+slumpmässiga bygg som vinner (lösningsutrymmets storlek), och går banan att
+klara utan att bygga något. Siffrorna är inte betyg — en svår bana får vara
+trång — men de visar när en bana är trång *av misstag*.
+
+Granskningen är också vad som avslöjade att tre brickor delade ut delar ingen
+lösning rörde, och att fyra lösningar bar på en del de inte behövde.
+
+En sak den lärde ut som är värd att ha med sig: **i en deterministisk
+simulering kan ett sikthjälpmedel aldrig bli nödvändigt.** Tratten gör det
+lättare för en människa att träffa en smal springa, men en tillräckligt exakt
+plankvinkel gör samma sak. Trattens verkliga värde är att den är två ytor på
+en plats i brickan. Banor byggs därför inte på att tratten ska vara *tvingande*
+— det går inte — utan på att den ska vara det självklara valet.
 
 ### Lägga till en bana
 
