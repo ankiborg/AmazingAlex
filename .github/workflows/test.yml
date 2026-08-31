@@ -1,0 +1,31 @@
+name: Prov
+
+# Provet spelar igenom varje bana genom gränssnittet, bygger bana 1 för hand
+# på tre skärmstorlekar och en gång med enbart tangentbord, och kör igenom
+# kantfallen. Det tar drygt tre minuter och är hela skyddsnätet: spelet har
+# inga andra prov, och banorna går sönder av ändringar som ser oskyldiga ut.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Installera beroenden
+        run: npm ci
+
+      # Playwright behöver själva webbläsaren, inte bara paketet
+      - name: Hämta Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Kör provet
+        run: npm test

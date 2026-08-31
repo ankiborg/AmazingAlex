@@ -167,6 +167,10 @@ npm install
 npm test          # spelar upp varje bana genom gränssnittet
 ```
 
+Samma prov kör i GitHub Actions på varje pull request och på varje push till
+`main`. Det är hela skyddsnätet — spelet har inga andra prov, och banorna går
+sönder av ändringar som ser oskyldiga ut.
+
 Testet kräver att
 
 - alla tjugotvå banor slutar med "Klart!",
