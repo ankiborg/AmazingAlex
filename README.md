@@ -157,6 +157,20 @@ En fallgrop värd att känna till: handtesterna måste köra i förgrunden.
 Bakgrundsflikar får sin `requestAnimationFrame` strypt, och spelets fysik går i
 takt med den — testet hänger annars i väntan på en kula som knappt rör sig.
 
+### Mäta rittiden
+
+```
+node tools/perf.mjs
+```
+
+Pegboardens hål, den fasta plywooden och koppen ser likadana ut varje bildruta
+och ritas därför en gång till en egen canvas som sedan kopieras in. Det tog
+byggläget från 4,65 till 0,04 ms per bildruta — sexhundra `arc()`-anrop i
+sekunden gånger sextio är den sortens kostnad en långsam telefon känner av,
+även när en bärbar dator inte gör det.
+
+Lagret ritas om när banan, storleken eller färgtemat ändras.
+
 ### Mäta banorna
 
 ```
