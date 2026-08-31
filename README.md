@@ -40,7 +40,9 @@ spelaren kunnat bygga lägen fysiken inte kan svara vettigt på.
 
 Första gången någon öppnar spelet finns ingen som säger att delarna ska dras
 ut på brädan. En lapp säger det, och när den första kulan väl rullat är den
-borta för gott.
+borta för gott. Samma lapp presenterar varje ny del första gången den delas
+ut — vad en fläkt gör är inte självklart av att den ligger i hyllan — och
+varje del presenteras exakt en gång.
 
 Räknaren uppe till höger visar hur många av spelets stjärnor som är hämtade.
 Klarade banor märks med en mässingsprick i banväljaren, och eftersom det är
