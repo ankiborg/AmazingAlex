@@ -7,11 +7,14 @@
     --ground: #EFEAE1;
     --ground-2: #E4DCCF;
     --ink: #26221E;
-    --ink-soft: #6A6157;
+    --ink-soft: #645C52;
     --line: #CFC4B2;
-    --accent: #E2560B;
+    --accent: #C4470A;
     --accent-ink: #FFF6F0;
     --danger: #B4291D;
+    /* Mässing lyser fint som stjärna på pegboarden men är oläsbar som text mot
+       ljus botten — 2,0:1. Textvarianten är mörkare och når 5,2:1. */
+    --brass-ink: #7E5A0C;
     --brass: #D99B24;
     --shadow: 0 1px 0 rgba(38,34,30,.10), 0 12px 28px -14px rgba(38,34,30,.45);
 
@@ -40,6 +43,7 @@
       --accent-ink: #1B1108;
       --danger: #FF6B5A;
       --brass: #E8B54A;
+      --brass-ink: #E8B54A;
       --shadow: 0 1px 0 rgba(0,0,0,.5), 0 16px 34px -16px rgba(0,0,0,.8);
       --board: #8E7551;
       --board-dark: #6E5A3D;
@@ -58,6 +62,7 @@
     --accent-ink: #1B1108;
     --danger: #FF6B5A;
     --brass: #E8B54A;
+    --brass-ink: #E8B54A;
     --shadow: 0 1px 0 rgba(0,0,0,.5), 0 16px 34px -16px rgba(0,0,0,.8);
     --board: #8E7551;
     --board-dark: #6E5A3D;
@@ -109,7 +114,7 @@
     margin: 0;
     font-family: "DM Mono", ui-monospace, monospace;
     font-size: 13px;
-    color: var(--brass);
+    color: var(--brass-ink);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
@@ -243,7 +248,7 @@
     display: flex; justify-content: center; gap: 4px;
     margin: 0 0 12px;
     font-size: 17px;
-    color: var(--brass);
+    color: var(--brass-ink);
     letter-spacing: 2px;
   }
   .veil .score[hidden] { display: none; }
