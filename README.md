@@ -73,6 +73,23 @@ fart, anslag låter olika hårt beroende på hur fort den slog i, och stjärnorn
 klingar stigande för varje tagen i samma försök. Ljudkontexten skapas först vid
 en riktig användargest, annars blockerar webbläsaren den ändå.
 
+## Färgerna är mätta, inte gissade
+
+Ljusa temat hade tre par som föll under WCAG AA:
+
+| Vad | Före | Efter |
+| --- | --- | --- |
+| Stjärnräknaren | 2,02 | 5,22 |
+| Text på den orange knappen | 3,54 | 4,63 |
+| Dämpad text i en panel | 4,46 | 4,83 |
+
+Mässing lyser fint som stjärna på pegboarden men är oläsbar som text mot ljus
+botten, så den har en egen mörkare textvariant (`--brass-ink`). Accenten är
+nedtonad ett steg, vilket dessutom gjorde kulans pricklinje *mer* synlig mot
+den tanfärgade brädan.
+
+Mörka temat klarade allt med god marginal.
+
 ## På liten skärm
 
 Brädan mäter själv hur mycket plats rubrik, uppgift och hylla tar och krymper
